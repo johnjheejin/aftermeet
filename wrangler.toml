@@ -1,0 +1,11 @@
+name = "aftermeet"
+compatibility_date = "2024-09-01"
+pages_build_output_dir = "public"
+
+[[kv_namespaces]]
+binding = "EVENTS"
+id = "33ff1e45dbe84e88889999443dc4f51e"
+
+[[kv_namespaces]]
+binding = "PROFILES"
+id = "afe1515274ea499ea6c8227bb31d3250"

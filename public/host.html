@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Host an event · aftermeet</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif; }
+  .grad { background: radial-gradient(circle at top left, #1e1b4b 0%, #0f172a 50%, #000 100%); }
+</style>
+</head>
+<body class="grad text-white min-h-screen">
+<nav class="px-6 py-4">
+  <a href="/" class="font-bold text-xl">🤝 aftermeet</a>
+</nav>
+
+<main class="max-w-2xl mx-auto px-6 pt-12 pb-24">
+  <h1 class="text-4xl font-extrabold mb-2">Host an event 🎤</h1>
+  <p class="text-slate-400 mb-10">Paste your event URL. We'll do the rest.</p>
+
+  <form id="hostForm" class="space-y-6">
+    <div>
+      <label class="block text-sm font-medium mb-2 text-slate-300">Event URL</label>
+      <input
+        id="eventUrl"
+        type="url"
+        required
+        placeholder="https://cerebralvalley.ai/e/... or https://lu.ma/..."
+        class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-lg focus:border-violet-400 focus:bg-white/10 outline-none transition"
+      />
+      <p class="text-xs text-slate-500 mt-2">We support Cerebral Valley and Luma.</p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-2 text-slate-300">Your profile link (host)</label>
+      <input
+        id="hostProfile"
+        type="url"
+        placeholder="https://linkedin.com/in/... or your personal site"
+        class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-lg focus:border-violet-400 focus:bg-white/10 outline-none transition"
+      />
+    </div>
+
+    <button
+      type="submit"
+      class="w-full px-8 py-4 bg-violet-500 hover:bg-violet-400 rounded-xl font-semibold text-lg transition disabled:opacity-50"
+      id="submitBtn"
+    >
+      Create event page →
+    </button>
+  </form>
+
+  <div id="status" class="mt-6 text-center text-slate-400"></div>
+  <div id="result" class="mt-10 hidden"></div>
+</main>
+
+<script>
+const form = document.getElementById('hostForm');
+const btn = document.getElementById('submitBtn');
+const status = document.getElementById('status');
+const result = document.getElementById('result');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const eventUrl = document.getElementById('eventUrl').value.trim();
+  const hostProfile = document.getElementById('hostProfile').value.trim();
+  btn.disabled = true;
+  btn.textContent = 'Parsing event…';
+  status.textContent = '';
+
+  try {
+    const res = await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventUrl, hostProfile })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    window.location.href = `/e/${data.slug}/screen`;
+  } catch (err) {
+    status.innerHTML = `<span class="text-red-400">${err.message}</span>`;
+    btn.disabled = false;
+    btn.textContent = 'Create event page →';
+  }
+});
+</script>
+</body>
+</html>
