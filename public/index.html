@@ -1,13 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-locale="auto">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>aftermeet — the meet doesn't end after the meet</title>
+<title data-i18n="title">aftermeet — the meet doesn't end after the meet</title>
 <meta name="description" content="Persistent networking for in-person events. Paste a Luma/Cerebral Valley link, project a QR, and stay connected after the lights go down." />
-<meta property="og:title" content="aftermeet" />
-<meta property="og:description" content="The meet doesn't end after the meet." />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%23A78BFA%22/></svg>" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%23E67E5C%22/></svg>" />
 <link rel="stylesheet" href="/style.css" />
 <style>
   main { max-width: 1100px; margin: 0 auto; padding: 0 28px; }
@@ -22,6 +20,9 @@
   footer { padding: 40px 28px; text-align: center; font-size: 13px; color: var(--text-dim); border-top: 1px solid var(--border); margin-top: 60px; }
   footer a { color: var(--text-muted); text-decoration: none; border-bottom: 1px solid var(--border); padding-bottom: 1px; }
   footer a:hover { color: var(--text); }
+  .lang-switch { display: inline-flex; gap: 4px; font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+  .lang-switch a { padding: 4px 8px; border-radius: 6px; text-decoration: none; color: var(--text-dim); }
+  .lang-switch a.on { background: var(--bg-elev); color: var(--accent-hi); }
   @media (max-width: 720px) { .features { grid-template-columns: 1fr; } .hero { padding: 60px 0 50px; } }
 </style>
 </head>
@@ -30,44 +31,88 @@
 <nav class="nav">
   <a href="/" class="brand"><span class="brand-dot"></span>aftermeet</a>
   <div style="display:flex;gap:10px;align-items:center;">
-    <a href="/pitch" class="btn btn-ghost btn-sm">Pitch</a>
-    <a href="/host" class="btn btn-primary btn-sm">Host an event →</a>
+    <span class="lang-switch">
+      <a href="?lang=ko" data-lang="ko">KO</a>
+      <a href="?lang=en" data-lang="en">EN</a>
+    </span>
+    <a href="/pitch" class="btn btn-ghost btn-sm" data-i18n="pitch">Pitch</a>
+    <a href="/host" class="btn btn-primary btn-sm" data-i18n="hostBtn">Host an event →</a>
   </div>
 </nav>
 
 <main>
   <section class="hero rise-stagger">
-    <div class="eyebrow">PERSISTENT NETWORKING · v0.1</div>
-    <h1 class="display glow">The meet doesn't end<br/>after the meet.</h1>
-    <p class="hero-sub">Paste a Luma or Cerebral Valley link. We make a page. People scan a QR. They stay connected — for real, after everyone goes home.</p>
+    <div class="eyebrow" data-i18n="eyebrow">PERSISTENT NETWORKING · v0.1</div>
+    <h1 class="display glow" data-i18n-html="heroH1">The meet doesn't end<br/>after the meet.</h1>
+    <p class="hero-sub" data-i18n="heroSub">Paste a Luma or Cerebral Valley link. We make a page. People scan a QR. They stay connected — for real, after everyone goes home.</p>
     <div class="hero-ctas">
-      <a href="/host" class="btn btn-primary">🎤 Host an event</a>
-      <a href="#how" class="btn btn-ghost">How it works</a>
+      <a href="/host" class="btn btn-primary" data-i18n="hostCta">🎤 Host an event</a>
+      <a href="#how" class="btn btn-ghost" data-i18n="howCta">How it works</a>
     </div>
   </section>
 
   <section id="how" class="features rise-stagger">
     <div class="card-flat feature">
       <div class="feature-num">01</div>
-      <h3>Host pastes a link</h3>
-      <p>Drop a Luma or Cerebral Valley URL. Title, time, location — pulled automatically.</p>
+      <h3 data-i18n="f1h">Host pastes a link</h3>
+      <p data-i18n="f1p">Drop a Luma or Cerebral Valley URL. Title, time, location — pulled automatically.</p>
     </div>
     <div class="card-flat feature">
       <div class="feature-num">02</div>
-      <h3>Crowd scans a QR</h3>
-      <p>Big QR on the projector. Attendees paste their LinkedIn, X, or site. Profile auto-fills.</p>
+      <h3 data-i18n="f2h">Crowd scans a QR</h3>
+      <p data-i18n="f2p">Big QR on the projector. Attendees paste their LinkedIn, X, or site. Profile auto-fills.</p>
     </div>
     <div class="card-flat feature">
       <div class="feature-num">03</div>
-      <h3>The page persists</h3>
-      <p>The event page lives on. Bookmark it, share it, come back to it a year later.</p>
+      <h3 data-i18n="f3h">The page persists</h3>
+      <p data-i18n="f3p">The event page lives on. Bookmark it, share it, come back to it a year later.</p>
     </div>
   </section>
 </main>
 
 <footer>
-  Built at Genspark Meetup Seoul · <a href="/pitch">Pitch</a> · <a href="https://github.com/johnjheejin/aftermeet" target="_blank">GitHub</a>
+  <span data-i18n="footer">Built at Genspark Meetup Seoul</span> · <a href="/pitch" data-i18n="pitch">Pitch</a> · <a href="https://github.com/johnjheejin/aftermeet" target="_blank">GitHub</a>
 </footer>
 
+<script src="/i18n.js"></script>
+<script>
+  const I18N = {
+    ko: {
+      title: 'aftermeet — 행사는 끝나도, 만남은 끝나지 않게',
+      pitch: '피치',
+      hostBtn: '행사 만들기 →',
+      eyebrow: '지속 가능한 네트워킹 · v0.1',
+      heroH1: '행사는 끝나도,<br/>만남은 끝나지 않게.',
+      heroSub: 'Luma나 Cerebral Valley 링크를 붙여넣으면 페이지가 만들어집니다. 참석자들은 QR을 찍고, 행사 끝난 뒤에도 계속 연결되어 있어요.',
+      hostCta: '🎤 행사 만들기',
+      howCta: '어떻게 작동하나요',
+      f1h: '호스트가 링크를 붙여넣고',
+      f1p: 'Luma나 Cerebral Valley URL이면 됩니다. 제목, 시간, 장소까지 자동으로 가져와요.',
+      f2h: '참석자들이 QR을 스캔',
+      f2p: '프로젝터에 큰 QR. 참석자는 LinkedIn, X, 또는 본인 사이트를 붙여넣으면 프로필이 자동 완성.',
+      f3h: '페이지는 계속 살아있어요',
+      f3p: '행사 페이지가 영구 유지됩니다. 북마크하고, 공유하고, 1년 뒤에도 다시 와서 보세요.',
+      footer: 'Genspark Meetup Seoul에서 만들었어요',
+    },
+    en: {
+      title: "aftermeet — the meet doesn't end after the meet",
+      pitch: 'Pitch',
+      hostBtn: 'Host an event →',
+      eyebrow: 'PERSISTENT NETWORKING · v0.1',
+      heroH1: "The meet doesn't end<br/>after the meet.",
+      heroSub: 'Paste a Luma or Cerebral Valley link. We make a page. People scan a QR. They stay connected — for real, after everyone goes home.',
+      hostCta: '🎤 Host an event',
+      howCta: 'How it works',
+      f1h: 'Host pastes a link',
+      f1p: 'Drop a Luma or Cerebral Valley URL. Title, time, location — pulled automatically.',
+      f2h: 'Crowd scans a QR',
+      f2p: 'Big QR on the projector. Attendees paste their LinkedIn, X, or site. Profile auto-fills.',
+      f3h: 'The page persists',
+      f3p: 'The event page lives on. Bookmark it, share it, come back to it a year later.',
+      footer: 'Built at Genspark Meetup Seoul',
+    },
+  };
+  applyI18n(I18N);
+</script>
 </body>
 </html>

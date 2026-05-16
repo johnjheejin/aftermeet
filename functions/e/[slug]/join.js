@@ -1,22 +1,41 @@
 // Mobile join page — what attendees see after scanning the QR
-export async function onRequestGet({ params, env }) {
+import { detectLocale, t } from '../../_lib/i18n.js';
+
+export async function onRequestGet({ params, env, request }) {
   const slug = params.slug;
   const raw = await env.EVENTS.get(`event:${slug}`);
   if (!raw) return new Response('Event not found', { status: 404 });
   const event = JSON.parse(raw);
+  const L = detectLocale(request);
+
+  const S = {
+    title: t(L, { ko: `${event.title} 참여 · aftermeet`, en: `Join ${event.title} · aftermeet` }),
+    youJoining: t(L, { ko: '참여 중인 행사', en: "YOU'RE JOINING" }),
+    profileLabel: t(L, { ko: '본인 프로필 링크', en: 'Your profile link' }),
+    profilePh: t(L, { ko: 'linkedin.com/in/you · x.com/you · github.com/you', en: 'linkedin.com/in/you · x.com/you · github.com/you' }),
+    profileHint: t(L, { ko: 'LinkedIn, X, GitHub, 또는 본인 사이트. 나머지는 자동으로 채워드려요.', en: 'LinkedIn, X, GitHub, or your personal site. We auto-fill the rest.' }),
+    detailsSummary: t(L, { ko: '이름이나 한 줄 소개 추가하기', en: 'Add a custom name or one-liner' }),
+    namePh: t(L, { ko: '표시할 이름 (선택)', en: 'Display name (optional)' }),
+    notePh: t(L, { ko: '요즘 뭐 하고 계세요? (한 줄)', en: "What are you working on? (one line)" }),
+    submit: t(L, { ko: '연결하기 →', en: 'Join the meet →' }),
+    connecting: t(L, { ko: '연결 중…', en: 'Connecting…' }),
+    successH: t(L, { ko: '연결됐어요.', en: "You're in." }),
+    successP: t(L, { ko: '다른 참여자들도 확인해보세요. 페이지를 북마크해두면 행사 후에도 다시 올 수 있어요.', en: 'See who else is here, and bookmark the page — it stays after the meet.' }),
+    successBtn: t(L, { ko: '참여자 보기 →', en: 'View participants →' }),
+  };
 
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="${L}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Join ${escapeHtml(event.title)} · aftermeet</title>
+<title>${escapeHtml(S.title)}</title>
 <link rel="stylesheet" href="/style.css" />
 <style>
   main { max-width: 460px; margin: 0 auto; padding: 24px 20px 60px; }
   .ev-banner { padding: 18px; border-radius: 16px;
-    background: linear-gradient(135deg, rgba(76,29,149,0.4), rgba(30,27,75,0.4));
-    border: 1px solid rgba(167,139,250,0.3); margin-bottom: 28px; }
+    background: linear-gradient(135deg, rgba(124,45,18,0.4), rgba(67,33,17,0.4));
+    border: 1px solid rgba(230,126,92,0.3); margin-bottom: 28px; }
   .ev-banner h1 { font-size: 22px; font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; margin: 4px 0 6px; }
   .ev-banner .meta { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
   .form-stack > * + * { margin-top: 18px; }
@@ -31,39 +50,46 @@ export async function onRequestGet({ params, env }) {
   .success-emoji { font-size: 56px; margin-bottom: 16px; }
   .success h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
   .success p { color: var(--text-muted); margin-bottom: 28px; }
+  .lang-switch { display: inline-flex; gap: 4px; font-size: 11px; }
+  .lang-switch a { padding: 4px 8px; border-radius: 6px; text-decoration: none; color: var(--text-dim); }
+  .lang-switch a.on { background: var(--bg-elev); color: var(--accent-hi); }
 </style>
 </head>
 <body>
 
 <nav class="nav">
   <a href="/" class="brand"><span class="brand-dot"></span>aftermeet</a>
+  <span class="lang-switch">
+    <a href="?lang=ko" class="${L==='ko'?'on':''}">KO</a>
+    <a href="?lang=en" class="${L==='en'?'on':''}">EN</a>
+  </span>
 </nav>
 
 <main class="rise">
   <div class="ev-banner">
-    <div class="eyebrow">YOU'RE JOINING</div>
+    <div class="eyebrow">${escapeHtml(S.youJoining)}</div>
     <h1>${escapeHtml(event.title)}</h1>
     ${event.location ? `<p class="meta">📍 ${escapeHtml(event.location)}</p>` : ''}
   </div>
 
   <form id="joinForm" class="form-stack">
     <div>
-      <label class="label" for="profileUrl">Your profile link</label>
+      <label class="label" for="profileUrl">${escapeHtml(S.profileLabel)}</label>
       <input id="profileUrl" class="input" type="url" required autofocus inputmode="url"
-             placeholder="linkedin.com/in/you · x.com/you · github.com/you" />
-      <p class="hint">LinkedIn, X, GitHub, or your personal site. We auto-fill the rest.</p>
+             placeholder="${escapeAttr(S.profilePh)}" />
+      <p class="hint">${escapeHtml(S.profileHint)}</p>
     </div>
 
     <details>
-      <summary>Add a custom name or one-liner</summary>
+      <summary>${escapeHtml(S.detailsSummary)}</summary>
       <div>
-        <input id="displayName" class="input" type="text" placeholder="Display name (optional)" />
-        <input id="note" class="input" type="text" placeholder='What are you working on? (one line)' />
+        <input id="displayName" class="input" type="text" placeholder="${escapeAttr(S.namePh)}" />
+        <input id="note" class="input" type="text" placeholder="${escapeAttr(S.notePh)}" />
       </div>
     </details>
 
     <button id="submitBtn" type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
-      Join the meet →
+      ${escapeHtml(S.submit)}
     </button>
   </form>
 
@@ -71,9 +97,9 @@ export async function onRequestGet({ params, env }) {
 
   <div id="success" class="success rise" style="display:none;">
     <div class="success-emoji">🤝</div>
-    <h2>You're in.</h2>
-    <p>See who else is here, and bookmark the page — it stays after the meet.</p>
-    <a href="/e/${slug}" class="btn btn-primary">View participants →</a>
+    <h2>${escapeHtml(S.successH)}</h2>
+    <p>${escapeHtml(S.successP)}</p>
+    <a href="/e/${slug}" class="btn btn-primary">${escapeHtml(S.successBtn)}</a>
   </div>
 </main>
 
@@ -82,6 +108,8 @@ const form = document.getElementById('joinForm');
 const btn = document.getElementById('submitBtn');
 const statusEl = document.getElementById('status');
 const successEl = document.getElementById('success');
+const SUBMIT_LABEL = ${JSON.stringify(S.submit)};
+const CONNECTING_LABEL = ${JSON.stringify(S.connecting)};
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -89,7 +117,7 @@ form.addEventListener('submit', async (e) => {
   if (profileUrl && !/^https?:\\/\\//i.test(profileUrl)) profileUrl = 'https://' + profileUrl;
 
   btn.disabled = true;
-  btn.textContent = 'Connecting…';
+  btn.textContent = CONNECTING_LABEL;
   statusEl.textContent = '';
 
   try {
@@ -110,16 +138,24 @@ form.addEventListener('submit', async (e) => {
   } catch (err) {
     statusEl.innerHTML = '<span class="err">' + err.message + '</span>';
     btn.disabled = false;
-    btn.textContent = 'Join the meet →';
+    btn.textContent = SUBMIT_LABEL;
   }
 });
 </script>
 </body>
 </html>`;
-  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+
+  const headers = { 'Content-Type': 'text/html; charset=utf-8' };
+  // Sticky cookie if ?lang= was used
+  const url = new URL(request.url);
+  if (url.searchParams.get('lang') === 'ko' || url.searchParams.get('lang') === 'en') {
+    headers['Set-Cookie'] = `aftermeet_lang=${url.searchParams.get('lang')}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  }
+  return new Response(html, { headers });
 }
 
 function escapeHtml(s) {
   if (!s) return '';
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+function escapeAttr(s) { return escapeHtml(s); }

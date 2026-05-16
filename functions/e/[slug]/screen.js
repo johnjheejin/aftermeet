@@ -1,16 +1,26 @@
 // Big-screen QR page — designed to project at events
+import { detectLocale, t } from '../../_lib/i18n.js';
+
 export async function onRequestGet({ params, env, request }) {
   const slug = params.slug;
   const raw = await env.EVENTS.get(`event:${slug}`);
   if (!raw) return new Response('Event not found', { status: 404 });
   const event = JSON.parse(raw);
+  const L = detectLocale(request);
 
   const baseUrl = new URL(request.url).origin;
   const joinUrl = `${baseUrl}/e/${slug}/join`;
   const count = (event.participantIds || []).length;
 
+  const S = {
+    live: t(L, { ko: '진행중', en: 'LIVE' }),
+    scan: t(L, { ko: '📱 QR을 스캔하세요', en: '📱 Scan to join' }),
+    connected: t(L, { ko: '명 연결됨', en: 'connected' }),
+    seeAll: t(L, { ko: '참여자 보기 →', en: 'See participants →' }),
+  };
+
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="${L}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -22,7 +32,7 @@ export async function onRequestGet({ params, env, request }) {
   .ev-head { text-align: center; max-width: 1000px; }
   .ev-title { font-size: clamp(40px, 6vw, 72px); font-weight: 800; line-height: 1.05; letter-spacing: -0.035em; margin: 12px 0 8px; }
   .ev-loc { font-size: 18px; color: var(--text-muted); }
-  .qr-wrap { background: white; padding: 28px; border-radius: 32px; box-shadow: 0 0 100px -10px var(--accent-glow), 0 0 0 1px rgba(167,139,250,0.25); }
+  .qr-wrap { background: white; padding: 28px; border-radius: 32px; box-shadow: 0 0 100px -10px var(--accent-glow), 0 0 0 1px rgba(230,126,92,0.25); }
   .scan-cta { font-size: clamp(20px, 2vw, 28px); color: var(--text); }
   .url { font-family: ui-monospace, monospace; color: var(--text-muted); font-size: 16px; }
   .live-pill { font-size: 16px; padding: 10px 18px; }
@@ -37,7 +47,7 @@ export async function onRequestGet({ params, env, request }) {
 
 <div class="screen rise-stagger">
   <div class="ev-head">
-    <div class="eyebrow">${escapeHtml(event.source.toUpperCase())} · LIVE</div>
+    <div class="eyebrow">${escapeHtml(event.source.toUpperCase())} · ${escapeHtml(S.live)}</div>
     <h1 class="ev-title">${escapeHtml(event.title)}</h1>
     ${event.location ? `<p class="ev-loc">📍 ${escapeHtml(event.location)}</p>` : ''}
   </div>
@@ -49,18 +59,18 @@ export async function onRequestGet({ params, env, request }) {
   </div>
 
   <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;">
-    <p class="scan-cta">📱 Scan to join</p>
+    <p class="scan-cta">${escapeHtml(S.scan)}</p>
     <p class="url">${escapeHtml(joinUrl.replace(/^https?:\/\//, ''))}</p>
   </div>
 
   <div class="chip chip-live live-pill">
     <span class="dot-live"></span>
     <span class="live-num" id="count">${count}</span>
-    <span>connected</span>
+    <span>${escapeHtml(S.connected)}</span>
   </div>
 </div>
 
-<a href="/e/${slug}" class="footer-link">See participants →</a>
+<a href="/e/${slug}" class="footer-link">${escapeHtml(S.seeAll)}</a>
 
 <script>
 async function refresh() {
@@ -76,7 +86,13 @@ setInterval(refresh, 3000);
 </script>
 </body>
 </html>`;
-  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+
+  const headers = { 'Content-Type': 'text/html; charset=utf-8' };
+  const url = new URL(request.url);
+  if (url.searchParams.get('lang') === 'ko' || url.searchParams.get('lang') === 'en') {
+    headers['Set-Cookie'] = `aftermeet_lang=${url.searchParams.get('lang')}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  }
+  return new Response(html, { headers });
 }
 
 function escapeHtml(s) {

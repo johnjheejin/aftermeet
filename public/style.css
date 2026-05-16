@@ -1,20 +1,22 @@
 /* aftermeet — design system tokens (see /DESIGN.md) */
 
 :root {
-  --bg: #07070C;
-  --bg-elev: #0F0F1A;
-  --bg-elev-2: #1A1A2E;
-  --border: rgba(255,255,255,0.08);
-  --border-hi: rgba(167,139,250,0.4);
+  /* warm-charcoal base — feels like an after-hours room with lamps still on */
+  --bg: #0E0B08;
+  --bg-elev: #1A1410;
+  --bg-elev-2: #241B15;
+  --border: rgba(255,228,206,0.08);
+  --border-hi: rgba(230,126,92,0.4);
 
-  --text: #F5F5F7;
-  --text-muted: #A1A1AA;
-  --text-dim: #52525B;
+  --text: #FAF4EC;
+  --text-muted: #B9A99B;
+  --text-dim: #6B5C50;
 
-  --accent: #A78BFA;
-  --accent-hi: #C4B5FD;
-  --accent-low: #4C1D95;
-  --accent-glow: rgba(139,92,246,0.35);
+  /* terracotta — warmth, persistence, human connection */
+  --accent: #E67E5C;
+  --accent-hi: #F4A88A;
+  --accent-low: #7C2D12;
+  --accent-glow: rgba(230,126,92,0.32);
 
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -30,9 +32,10 @@ html, body {
 body {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 1200px 800px at 10% -10%, rgba(76,29,149,0.35), transparent 60%),
-    radial-gradient(ellipse 800px 600px at 90% 110%, rgba(30,27,75,0.4), transparent 50%),
-    #07070C;
+    radial-gradient(ellipse 1200px 800px at 10% -10%, rgba(124,45,18,0.45), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 90% 110%, rgba(67,33,17,0.5), transparent 55%),
+    radial-gradient(ellipse 600px 400px at 50% 100%, rgba(230,126,92,0.08), transparent 60%),
+    #0E0B08;
 }
 
 /* — Typography — */
@@ -102,7 +105,7 @@ h1, h2, h3 { letter-spacing: -0.035em; }
 }
 .btn-primary {
   background: var(--accent);
-  color: #1A0B3D;
+  color: #1A0F08;
 }
 .btn-primary:hover {
   background: var(--accent-hi);
@@ -199,7 +202,7 @@ h1, h2, h3 { letter-spacing: -0.035em; }
   width: 56px; height: 56px; border-radius: 50%;
   background: linear-gradient(135deg, var(--accent-low), var(--accent));
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px; font-weight: 700; color: white;
+  font-size: 20px; font-weight: 700; color: #FAF4EC;
   margin-bottom: 14px;
   object-fit: cover;
 }
