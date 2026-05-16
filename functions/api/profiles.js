@@ -83,7 +83,11 @@ async function parseProfile(url) {
     if (handle) {
       try {
         const r = await fetch(`https://api.github.com/users/${handle}`, {
-          headers: { 'User-Agent': 'aftermeet' },
+          headers: {
+            'User-Agent': 'aftermeet (+https://github.com/johnjheejin/aftermeet)',
+            'Accept': 'application/vnd.github+json',
+          },
+          cf: { cacheTtl: 300 },
         });
         if (r.ok) {
           const d = await r.json();
@@ -133,8 +137,16 @@ async function parseProfile(url) {
 
 function cleanName(n, platform) {
   if (!n) return null;
-  // strip "(@handle) / X" etc.
-  return n.replace(/\s*\(@[^)]+\)\s*\/?\s*X?$/, '').replace(/\s*\|\s*LinkedIn$/i, '').trim();
+  let s = String(n).trim();
+  // Strip common platform-suffix junk:
+  //  "Jane Doe (@jane) / X"  →  "Jane Doe"
+  //  "Jane Doe | LinkedIn"   →  "Jane Doe"
+  //  "torvalds - Overview"   →  "torvalds"   (GitHub OG title)
+  //  "Jane Doe · GitHub"     →  "Jane Doe"
+  s = s.replace(/\s*\(@[^)]+\)\s*\/?\s*X?\s*$/, '');
+  s = s.replace(/\s*[\|\u00B7·-]\s*(LinkedIn|GitHub|Overview|X|Twitter|Threads)\s*$/i, '');
+  s = s.replace(/\s*-\s*Overview\s*$/i, '');
+  return s.trim() || null;
 }
 
 function decodeHtml(s) {
