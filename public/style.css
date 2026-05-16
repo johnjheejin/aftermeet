@@ -1,0 +1,269 @@
+/* aftermeet — design system tokens (see /DESIGN.md) */
+
+:root {
+  --bg: #07070C;
+  --bg-elev: #0F0F1A;
+  --bg-elev-2: #1A1A2E;
+  --border: rgba(255,255,255,0.08);
+  --border-hi: rgba(167,139,250,0.4);
+
+  --text: #F5F5F7;
+  --text-muted: #A1A1AA;
+  --text-dim: #52525B;
+
+  --accent: #A78BFA;
+  --accent-hi: #C4B5FD;
+  --accent-low: #4C1D95;
+  --accent-glow: rgba(139,92,246,0.35);
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 1200px 800px at 10% -10%, rgba(76,29,149,0.35), transparent 60%),
+    radial-gradient(ellipse 800px 600px at 90% 110%, rgba(30,27,75,0.4), transparent 50%),
+    #07070C;
+}
+
+/* — Typography — */
+h1, h2, h3 { letter-spacing: -0.035em; }
+.display { font-size: clamp(48px, 8vw, 96px); font-weight: 800; line-height: 1.02; letter-spacing: -0.04em; }
+.heading { font-size: clamp(32px, 4vw, 56px); font-weight: 800; line-height: 1.08; letter-spacing: -0.035em; }
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-hi);
+  font-weight: 500;
+}
+.mono { font-family: ui-monospace, "JetBrains Mono", "SF Mono", monospace; }
+.muted { color: var(--text-muted); }
+.dim { color: var(--text-dim); }
+
+/* — Layout — */
+.nav {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 28px; max-width: 1200px; margin: 0 auto;
+}
+.brand {
+  font-weight: 700; font-size: 17px;
+  display: inline-flex; align-items: center; gap: 8px;
+  text-decoration: none; color: var(--text);
+  letter-spacing: -0.01em;
+}
+.brand-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* — Cards / surfaces — */
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  transition: border-color 300ms var(--ease), transform 300ms var(--ease), box-shadow 300ms var(--ease);
+}
+.card:hover {
+  border-color: var(--border-hi);
+  transform: translateY(-2px);
+  box-shadow: 0 0 40px -10px var(--accent-glow);
+}
+.card-flat {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+/* — Buttons — */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 999px;
+  font-weight: 600; font-size: 15px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 250ms var(--ease);
+  letter-spacing: -0.01em;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #1A0B3D;
+}
+.btn-primary:hover {
+  background: var(--accent-hi);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px -8px var(--accent-glow);
+}
+.btn-ghost {
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: var(--border-hi);
+}
+.btn-sm { padding: 8px 18px; font-size: 13px; }
+
+/* — Inputs — */
+.input {
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  transition: all 250ms var(--ease);
+  outline: none;
+}
+.input:focus {
+  border-color: var(--accent);
+  background: var(--bg-elev-2);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+.input::placeholder { color: var(--text-dim); }
+.label {
+  display: block;
+  font-size: 13px; font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.hint {
+  font-size: 12px; color: var(--text-dim); margin-top: 8px;
+}
+
+/* — Chips / pills — */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.chip-live {
+  background: rgba(167,139,250,0.1);
+  border-color: rgba(167,139,250,0.3);
+  color: var(--accent-hi);
+}
+.dot-live {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--accent-glow); }
+  50% { opacity: 0.6; box-shadow: 0 0 0 6px transparent; }
+}
+
+/* — Glow — */
+.glow {
+  text-shadow: 0 0 80px var(--accent-glow);
+}
+
+/* — Person card — */
+.person {
+  display: block;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  transition: all 300ms var(--ease);
+}
+.person:hover {
+  border-color: var(--border-hi);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px -12px var(--accent-glow);
+}
+.person-avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-low), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700; color: white;
+  margin-bottom: 14px;
+  object-fit: cover;
+}
+.person-name { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+.person-title { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.person-note { font-size: 12px; color: var(--accent-hi); margin-top: 8px; line-height: 1.4; }
+.person-platform {
+  font-family: ui-monospace, monospace;
+  font-size: 11px; color: var(--text-dim);
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* — QR card — */
+.qr-card {
+  background: white;
+  padding: 28px;
+  border-radius: 28px;
+  box-shadow: 0 0 80px -10px var(--accent-glow), 0 0 0 1px rgba(167,139,250,0.2);
+}
+
+/* — Entrance animations — */
+.rise {
+  animation: rise 600ms var(--ease) both;
+}
+.rise-stagger > * { opacity: 0; transform: translateY(8px); animation: rise 500ms var(--ease) forwards; }
+.rise-stagger > *:nth-child(1) { animation-delay: 50ms; }
+.rise-stagger > *:nth-child(2) { animation-delay: 130ms; }
+.rise-stagger > *:nth-child(3) { animation-delay: 210ms; }
+.rise-stagger > *:nth-child(4) { animation-delay: 290ms; }
+.rise-stagger > *:nth-child(5) { animation-delay: 370ms; }
+.rise-stagger > *:nth-child(6) { animation-delay: 450ms; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* — Grid — */
+.grid-people {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+/* — Misc — */
+.divider {
+  height: 1px; background: var(--border);
+  margin: 32px 0;
+}
+.kbd {
+  font-family: ui-monospace, monospace;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* — Responsive — */
+@media (max-width: 640px) {
+  .nav { padding: 16px 20px; }
+  .input { padding: 14px 18px; font-size: 15px; }
+  .btn { padding: 12px 22px; font-size: 14px; }
+}

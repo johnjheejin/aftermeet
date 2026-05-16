@@ -1,4 +1,4 @@
-// Mobile join page — scanned via QR
+// Mobile join page — what attendees see after scanning the QR
 export async function onRequestGet({ params, env }) {
   const slug = params.slug;
   const raw = await env.EVENTS.get(`event:${slug}`);
@@ -11,80 +11,86 @@ export async function onRequestGet({ params, env }) {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Join ${escapeHtml(event.title)} · aftermeet</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/style.css" />
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif; }
-  .grad { background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 50%, #000 100%); }
+  main { max-width: 460px; margin: 0 auto; padding: 24px 20px 60px; }
+  .ev-banner { padding: 18px; border-radius: 16px;
+    background: linear-gradient(135deg, rgba(76,29,149,0.4), rgba(30,27,75,0.4));
+    border: 1px solid rgba(167,139,250,0.3); margin-bottom: 28px; }
+  .ev-banner h1 { font-size: 22px; font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; margin: 4px 0 6px; }
+  .ev-banner .meta { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+  .form-stack > * + * { margin-top: 18px; }
+  details summary { cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 6px 0; user-select: none; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "+ "; color: var(--accent); }
+  details[open] summary::before { content: "− "; }
+  details > div { padding-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+  #status { margin-top: 14px; text-align: center; font-size: 13px; }
+  #status .err { color: var(--danger); }
+  .success { text-align: center; padding: 40px 16px; }
+  .success-emoji { font-size: 56px; margin-bottom: 16px; }
+  .success h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+  .success p { color: var(--text-muted); margin-bottom: 28px; }
 </style>
 </head>
-<body class="grad text-white min-h-screen">
-<nav class="px-5 py-4">
-  <a href="/" class="font-bold text-lg">🤝 aftermeet</a>
+<body>
+
+<nav class="nav">
+  <a href="/" class="brand"><span class="brand-dot"></span>aftermeet</a>
 </nav>
 
-<main class="max-w-md mx-auto px-5 pt-6 pb-12">
-  <div class="mb-6 p-4 bg-violet-500/10 border border-violet-500/30 rounded-2xl">
-    <div class="text-xs uppercase tracking-widest text-violet-300 mb-1">You're joining</div>
-    <h1 class="text-2xl font-bold">${escapeHtml(event.title)}</h1>
-    ${event.location ? `<p class="text-slate-400 text-sm mt-1">📍 ${escapeHtml(event.location)}</p>` : ''}
+<main class="rise">
+  <div class="ev-banner">
+    <div class="eyebrow">YOU'RE JOINING</div>
+    <h1>${escapeHtml(event.title)}</h1>
+    ${event.location ? `<p class="meta">📍 ${escapeHtml(event.location)}</p>` : ''}
   </div>
 
-  <form id="joinForm" class="space-y-4">
+  <form id="joinForm" class="form-stack">
     <div>
-      <label class="block text-sm font-medium mb-2 text-slate-300">Your profile link</label>
-      <input
-        id="profileUrl" type="url" required autofocus
-        placeholder="linkedin.com/in/you · x.com/you · your-site.com"
-        class="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-base focus:border-violet-400 focus:bg-white/10 outline-none"
-      />
-      <p class="text-xs text-slate-500 mt-2">LinkedIn, X, GitHub, or your personal site. We auto-fill the rest.</p>
+      <label class="label" for="profileUrl">Your profile link</label>
+      <input id="profileUrl" class="input" type="url" required autofocus inputmode="url"
+             placeholder="linkedin.com/in/you · x.com/you · github.com/you" />
+      <p class="hint">LinkedIn, X, GitHub, or your personal site. We auto-fill the rest.</p>
     </div>
 
-    <details class="text-sm">
-      <summary class="text-slate-400 cursor-pointer py-2">Optional: add a custom name / note</summary>
-      <div class="space-y-3 pt-2">
-        <input id="displayName" type="text" placeholder="Display name (optional)"
-          class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-base focus:border-violet-400 outline-none" />
-        <input id="note" type="text" placeholder="What are you working on? (one line)"
-          class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-base focus:border-violet-400 outline-none" />
+    <details>
+      <summary>Add a custom name or one-liner</summary>
+      <div>
+        <input id="displayName" class="input" type="text" placeholder="Display name (optional)" />
+        <input id="note" class="input" type="text" placeholder='What are you working on? (one line)' />
       </div>
     </details>
 
-    <button type="submit" id="submitBtn"
-      class="w-full px-6 py-4 bg-violet-500 hover:bg-violet-400 rounded-xl font-semibold text-lg transition disabled:opacity-50">
+    <button id="submitBtn" type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
       Join the meet →
     </button>
   </form>
 
-  <div id="status" class="mt-4 text-center text-slate-400 text-sm"></div>
+  <div id="status"></div>
 
-  <div id="success" class="hidden mt-8 text-center">
-    <div class="text-6xl mb-4">🎉</div>
-    <h2 class="text-2xl font-bold mb-2">You're in!</h2>
-    <p class="text-slate-400 mb-6">See who else is here.</p>
-    <a id="viewBtn" href="/e/${slug}" class="inline-block px-6 py-3 bg-white text-black rounded-full font-semibold">
-      View participants →
-    </a>
+  <div id="success" class="success rise" style="display:none;">
+    <div class="success-emoji">🤝</div>
+    <h2>You're in.</h2>
+    <p>See who else is here, and bookmark the page — it stays after the meet.</p>
+    <a href="/e/${slug}" class="btn btn-primary">View participants →</a>
   </div>
 </main>
 
 <script>
 const form = document.getElementById('joinForm');
 const btn = document.getElementById('submitBtn');
-const status = document.getElementById('status');
-const success = document.getElementById('success');
-
-// Paste shortcut — if clipboard contains a URL, auto-fill on focus
-const urlInput = document.getElementById('profileUrl');
+const statusEl = document.getElementById('status');
+const successEl = document.getElementById('success');
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  let profileUrl = urlInput.value.trim();
+  let profileUrl = document.getElementById('profileUrl').value.trim();
   if (profileUrl && !/^https?:\\/\\//i.test(profileUrl)) profileUrl = 'https://' + profileUrl;
 
   btn.disabled = true;
   btn.textContent = 'Connecting…';
-  status.textContent = '';
+  statusEl.textContent = '';
 
   try {
     const res = await fetch('/api/profiles', {
@@ -99,10 +105,10 @@ form.addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
-    form.classList.add('hidden');
-    success.classList.remove('hidden');
+    form.style.display = 'none';
+    successEl.style.display = 'block';
   } catch (err) {
-    status.innerHTML = '<span class="text-red-400">' + err.message + '</span>';
+    statusEl.innerHTML = '<span class="err">' + err.message + '</span>';
     btn.disabled = false;
     btn.textContent = 'Join the meet →';
   }

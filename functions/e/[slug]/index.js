@@ -1,4 +1,4 @@
-// Event page — participant grid, persists after the event
+// Event page — persistent participant grid
 export async function onRequestGet({ params, env, request }) {
   const slug = params.slug;
   const raw = await env.EVENTS.get(`event:${slug}`);
@@ -11,9 +11,6 @@ export async function onRequestGet({ params, env, request }) {
     if (p) participants.push(JSON.parse(p));
   }
 
-  const baseUrl = new URL(request.url).origin;
-  const joinUrl = `${baseUrl}/e/${slug}/join`;
-
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,54 +18,70 @@ export async function onRequestGet({ params, env, request }) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${escapeHtml(event.title)} · aftermeet</title>
 <meta property="og:title" content="${escapeHtml(event.title)} · aftermeet" />
-<meta property="og:description" content="${escapeHtml(event.description || 'Stay connected after the meet.')}" />
-<script src="https://cdn.tailwindcss.com"></script>
+<meta property="og:description" content="${escapeHtml(event.description || "The meet doesn't end after the meet.")}" />
+<link rel="stylesheet" href="/style.css" />
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif; }
-  .grad { background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 50%, #000 100%); }
+  main { max-width: 1100px; margin: 0 auto; padding: 0 28px; }
+  .ev-header { padding: 32px 0 40px; }
+  .ev-title { font-size: clamp(32px, 4.5vw, 56px); font-weight: 800; line-height: 1.05; letter-spacing: -0.035em; margin: 10px 0 12px; }
+  .ev-desc { font-size: 16px; color: var(--text-muted); max-width: 720px; line-height: 1.55; margin-bottom: 18px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .empty { text-align: center; padding: 60px 24px; border: 1px dashed var(--border); border-radius: 20px; }
+  .empty h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 8px 0 6px; }
+  .empty p { color: var(--text-muted); margin-bottom: 22px; }
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  .section-head h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .section-head .count { font-size: 14px; color: var(--text-muted); }
+  footer { padding: 60px 28px 40px; text-align: center; font-size: 13px; color: var(--text-dim); }
 </style>
 </head>
-<body class="grad text-white min-h-screen">
-<nav class="px-6 py-4 flex justify-between items-center max-w-6xl mx-auto">
-  <a href="/" class="font-bold text-xl">🤝 aftermeet</a>
-  <div class="flex gap-2">
-    <a href="/e/${slug}/screen" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-sm">📺 Screen mode</a>
-    <a href="/e/${slug}/join" class="px-4 py-2 bg-violet-500 hover:bg-violet-400 rounded-full text-sm font-medium">+ Join</a>
+<body>
+
+<nav class="nav">
+  <a href="/" class="brand"><span class="brand-dot"></span>aftermeet</a>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <a href="/e/${slug}/screen" class="btn btn-ghost btn-sm">📺 Screen</a>
+    <a href="/e/${slug}/join" class="btn btn-primary btn-sm">+ Join</a>
   </div>
 </nav>
 
-<header class="max-w-5xl mx-auto px-6 pt-6 pb-10">
-  <div class="text-xs uppercase tracking-widest text-violet-300 mb-2">${escapeHtml(event.source)}</div>
-  <h1 class="text-4xl md:text-5xl font-extrabold mb-3">${escapeHtml(event.title)}</h1>
-  ${event.description ? `<p class="text-slate-300 max-w-3xl mb-4">${escapeHtml(event.description)}</p>` : ''}
-  <div class="flex flex-wrap gap-4 text-sm text-slate-400">
-    ${event.location ? `<span>📍 ${escapeHtml(event.location)}</span>` : ''}
-    ${event.date ? `<span>📅 ${escapeHtml(formatDate(event.date))}</span>` : ''}
-    <span>👥 ${participants.length} connected</span>
-    <a href="${escapeAttr(event.sourceUrl)}" class="underline" target="_blank">Original event ↗</a>
-  </div>
-</header>
+<main>
+  <header class="ev-header rise">
+    <div class="eyebrow">${escapeHtml(event.source.toUpperCase())} · PERSISTENT</div>
+    <h1 class="ev-title">${escapeHtml(event.title)}</h1>
+    ${event.description ? `<p class="ev-desc">${escapeHtml(truncate(event.description, 220))}</p>` : ''}
+    <div class="meta-row">
+      ${event.location ? `<span class="chip">📍 ${escapeHtml(event.location)}</span>` : ''}
+      ${event.date ? `<span class="chip">📅 ${escapeHtml(formatDate(event.date))}</span>` : ''}
+      <span class="chip">👥 ${participants.length} ${participants.length === 1 ? 'person' : 'people'}</span>
+      <a href="${escapeAttr(event.sourceUrl)}" target="_blank" class="chip" style="text-decoration:none;">Original ↗</a>
+    </div>
+  </header>
 
-<main class="max-w-5xl mx-auto px-6 pb-24">
   ${participants.length === 0 ? `
-    <div class="text-center py-20 bg-white/5 border border-white/10 rounded-2xl">
-      <div class="text-5xl mb-4">📭</div>
-      <p class="text-slate-300 text-xl mb-2">No one's joined yet</p>
-      <p class="text-slate-500 mb-6">Share the QR or this link to start collecting profiles.</p>
-      <a href="/e/${slug}/screen" class="inline-block px-6 py-3 bg-violet-500 hover:bg-violet-400 rounded-full font-semibold">
-        Open big-screen QR →
-      </a>
+    <div class="empty rise">
+      <div style="font-size: 36px; margin-bottom: 8px;">📭</div>
+      <h3>No one's joined yet</h3>
+      <p>Share the QR or this link to start collecting profiles.</p>
+      <a href="/e/${slug}/screen" class="btn btn-primary">Open big-screen QR →</a>
     </div>
   ` : `
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      ${participants.map(renderCard).join('')}
-    </div>
+    <section class="rise">
+      <div class="section-head">
+        <h2>Participants</h2>
+        <div class="count">${participants.length} ${participants.length === 1 ? 'person' : 'people'}</div>
+      </div>
+      <div class="grid-people rise-stagger">
+        ${participants.map(renderCard).join('')}
+      </div>
+    </section>
   `}
 </main>
 
-<footer class="max-w-5xl mx-auto px-6 pb-12 text-center text-slate-500 text-sm">
-  Event page persists. Bookmark it. The meet doesn't end after the meet. 🤝
+<footer>
+  This page persists. Bookmark it. <span class="dim">The meet doesn't end after the meet.</span>
 </footer>
+
 </body>
 </html>`;
 
@@ -76,24 +89,26 @@ export async function onRequestGet({ params, env, request }) {
 }
 
 function renderCard(p) {
-  const platformIcon = {
-    linkedin: '💼', x: '𝕏', github: '🐙', threads: '🧵', web: '🌐'
-  }[p.platform] || '🔗';
+  const platformIcon = { linkedin: '𝐢𝐧', x: '𝕏', github: '◉', threads: '@', web: '🌐' }[p.platform] || '🔗';
+  const initial = ((p.name || '?')[0] || '?').toUpperCase();
   return `
-    <a href="${escapeAttr(p.url)}" target="_blank" class="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-violet-400/50 rounded-2xl p-4 transition block">
+    <a class="person" href="${escapeAttr(p.url)}" target="_blank" rel="noopener">
       ${p.avatar ? `
-        <img src="${escapeAttr(p.avatar)}" alt="" class="w-16 h-16 rounded-full mb-3 object-cover bg-white/10" loading="lazy" onerror="this.style.display='none'" />
+        <img class="person-avatar" src="${escapeAttr(p.avatar)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'person-avatar\\'>${initial}</div>'" />
       ` : `
-        <div class="w-16 h-16 rounded-full mb-3 bg-violet-500/30 flex items-center justify-center text-2xl font-bold">
-          ${escapeHtml((p.name || '?')[0].toUpperCase())}
-        </div>
+        <div class="person-avatar">${initial}</div>
       `}
-      <div class="font-semibold truncate">${escapeHtml(p.name || 'Anonymous')}</div>
-      ${p.title ? `<div class="text-xs text-slate-400 truncate">${escapeHtml(p.title)}</div>` : ''}
-      ${p.note ? `<div class="text-xs text-violet-300 mt-1 line-clamp-2">${escapeHtml(p.note)}</div>` : ''}
-      <div class="text-xs text-slate-500 mt-2">${platformIcon} ${escapeHtml(p.platform)}</div>
+      <div class="person-name">${escapeHtml(p.name || 'Anonymous')}</div>
+      ${p.title ? `<div class="person-title">${escapeHtml(p.title)}</div>` : ''}
+      ${p.note ? `<div class="person-note">${escapeHtml(p.note)}</div>` : ''}
+      <div class="person-platform"><span>${platformIcon}</span><span>${escapeHtml(p.platform)}</span></div>
     </a>
   `;
+}
+
+function truncate(s, n) {
+  if (!s) return '';
+  return s.length > n ? s.slice(0, n).trim() + '…' : s;
 }
 
 function formatDate(s) {
@@ -107,6 +122,4 @@ function escapeHtml(s) {
   if (!s) return '';
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-function escapeAttr(s) {
-  return escapeHtml(s);
-}
+function escapeAttr(s) { return escapeHtml(s); }
