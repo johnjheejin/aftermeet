@@ -44,6 +44,29 @@
 
   .ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
 
+  /* closing slide layout */
+  .closing-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 36px;
+    align-items: center;
+    margin-top: 32px;
+    max-width: 720px;
+  }
+  .closing-qr { padding: 16px; border-radius: 20px; }
+  .closing-qr img { display: block; border-radius: 8px; }
+  .closing-side { text-align: left; }
+  .closing-cta-label {
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent-hi); font-weight: 500;
+  }
+  @media (max-width: 720px) {
+    .closing-grid { grid-template-columns: 1fr; gap: 20px; }
+    .closing-side { text-align: center; }
+    .closing-side .ctas { justify-content: center; }
+    .closing-side .kicker { text-align: center; }
+  }
+
   #dots { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 50; }
   #dots button { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.12); border: 0; padding: 0; cursor: pointer; transition: all 250ms var(--ease); }
   #dots button.active { width: 20px; background: var(--accent); }
@@ -183,15 +206,25 @@
 <!-- 9: Closing -->
 <section class="slide rise-stagger">
   <div class="eyebrow">감사합니다 · THANK YOU</div>
-  <h1 class="huge glow" style="font-size:clamp(36px,6.5vw,84px);">aftermeet.tmcowork.com</h1>
-  <p class="lede">행사는 끝나도, 만남은 끝나지 않게.
+  <h1 class="huge glow" style="font-size:clamp(32px,5.5vw,72px);margin-bottom:8px;">aftermeet.tmcowork.com</h1>
+  <p class="lede" style="margin-top:8px;">행사는 끝나도, 만남은 끝나지 않게.
     <span class="subline-en">The meet doesn't end after the meet.</span>
   </p>
-  <div class="ctas">
-    <a href="/host" class="btn btn-primary">호스트로 시작하기</a>
-    <a href="https://github.com/johnjheejin/aftermeet" target="_blank" class="btn btn-ghost">소스 보기 ↗</a>
+
+  <div class="closing-grid">
+    <div class="qr-card closing-qr">
+      <img id="siteQR" width="220" height="220" alt="aftermeet.pages.dev QR" />
+      <p class="mono" style="font-size:11px;color:#1A0F08;margin-top:8px;text-align:center;">aftermeet.pages.dev</p>
+    </div>
+    <div class="closing-side">
+      <p class="closing-cta-label">사이트 방문 · Visit the site</p>
+      <div class="ctas" style="margin-top:14px;justify-content:flex-start;">
+        <a href="/host" class="btn btn-primary">호스트로 시작하기</a>
+        <a href="https://github.com/johnjheejin/aftermeet" target="_blank" class="btn btn-ghost">소스 보기 ↗</a>
+      </div>
+      <p class="kicker" style="margin-top:24px;text-align:left;">Genspark Meetup Seoul에서 만들었어요 · 🤝</p>
+    </div>
   </div>
-  <p class="kicker">Genspark Meetup Seoul에서 만들었어요 · 🤝</p>
 </section>
 
 <div id="dots"></div>
@@ -242,6 +275,11 @@
   document.getElementById('qrUrl').textContent = joinUrl.replace(/^https?:\/\//, '');
   document.getElementById('pitchQR').src =
     'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=8&data=' + encodeURIComponent(joinUrl);
+
+  // Closing slide: QR pointing to the site itself
+  const siteUrl = window.location.origin + '/';
+  document.getElementById('siteQR').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=6&data=' + encodeURIComponent(siteUrl);
 
   async function refresh() {
     try {
