@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>aftermeet · pitch</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body { height: 100%; overflow: hidden; margin: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif; }
+  .grad { background: radial-gradient(circle at top left, #1e1b4b 0%, #0f172a 50%, #000 100%); }
+  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem; opacity: 0; transform: translateY(20px); transition: opacity .5s ease, transform .5s ease; pointer-events: none; }
+  .slide.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .glow { text-shadow: 0 0 60px rgba(139,92,246,.6); }
+  .kbd { font-family: ui-monospace, monospace; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 2px 8px; font-size: .8rem; }
+  .fade-in > * { opacity: 0; transform: translateY(10px); animation: rise .6s ease forwards; }
+  .slide.active.fade-in > *:nth-child(1) { animation-delay: .1s; }
+  .slide.active.fade-in > *:nth-child(2) { animation-delay: .25s; }
+  .slide.active.fade-in > *:nth-child(3) { animation-delay: .4s; }
+  .slide.active.fade-in > *:nth-child(4) { animation-delay: .55s; }
+  .slide.active.fade-in > *:nth-child(5) { animation-delay: .7s; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+  .marquee { animation: drift 30s linear infinite; }
+  @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+</style>
+</head>
+<body class="grad text-white">
+
+<div id="deck" class="relative w-screen h-screen">
+
+  <!-- Slide 1: Title -->
+  <section class="slide active fade-in text-center">
+    <div class="text-7xl mb-6">🤝</div>
+    <h1 class="text-8xl font-extrabold tracking-tight glow leading-none">aftermeet</h1>
+    <p class="text-3xl text-slate-300 mt-6">The meet doesn't end after the meet.</p>
+    <p class="text-sm text-slate-500 mt-12">Built at Genspark Meetup Seoul · May 2026</p>
+  </section>
+
+  <!-- Slide 2: Problem -->
+  <section class="slide fade-in text-center max-w-5xl mx-auto">
+    <div class="text-sm uppercase tracking-widest text-violet-300 mb-4">The problem</div>
+    <h2 class="text-6xl font-extrabold leading-tight mb-8">
+      You meet 50 people<br/>at an event.
+    </h2>
+    <p class="text-4xl text-slate-300">Two weeks later, you remember <span class="text-violet-300 font-bold">three</span>.</p>
+    <p class="text-xl text-slate-500 mt-10">Luma & CV close the page. Slack channels die. Business cards stay in drawers.</p>
+  </section>
+
+  <!-- Slide 3: Insight -->
+  <section class="slide fade-in text-center max-w-5xl mx-auto">
+    <div class="text-sm uppercase tracking-widest text-violet-300 mb-4">The insight</div>
+    <h2 class="text-6xl font-extrabold leading-tight mb-12">
+      The event ends.<br/>
+      <span class="text-violet-300">The relationships shouldn't.</span>
+    </h2>
+    <p class="text-2xl text-slate-300">We need a persistent space tied to the event itself.</p>
+  </section>
+
+  <!-- Slide 4: Solution -->
+  <section class="slide fade-in text-center max-w-5xl mx-auto">
+    <div class="text-sm uppercase tracking-widest text-violet-300 mb-4">aftermeet</div>
+    <h2 class="text-6xl font-extrabold leading-tight mb-12">One QR. Zero friction.</h2>
+    <div class="grid grid-cols-3 gap-8 text-left">
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+        <div class="text-4xl mb-3">1️⃣</div>
+        <div class="font-bold text-xl mb-1">Host pastes</div>
+        <div class="text-slate-400">a Luma or CV link</div>
+      </div>
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+        <div class="text-4xl mb-3">2️⃣</div>
+        <div class="font-bold text-xl mb-1">Crowd scans</div>
+        <div class="text-slate-400">drops profile link</div>
+      </div>
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+        <div class="text-4xl mb-3">3️⃣</div>
+        <div class="font-bold text-xl mb-1">Page persists</div>
+        <div class="text-slate-400">forever</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 5: Demo trigger -->
+  <section class="slide fade-in text-center">
+    <div class="text-sm uppercase tracking-widest text-violet-300 mb-6">Live demo</div>
+    <h2 class="text-7xl font-extrabold leading-tight mb-12">
+      Let's onboard <span class="text-violet-300">this room</span><br/>right now.
+    </h2>
+    <p class="text-2xl text-slate-300 mb-8">Press <span class="kbd">→</span> to bring up the QR.</p>
+    <p class="text-sm text-slate-500">Have your LinkedIn / X / GitHub ready.</p>
+  </section>
+
+  <!-- Slide 6: QR (live link to /screen) -->
+  <section class="slide text-center">
+    <p class="text-2xl text-slate-400 mb-4">📱 Scan to join</p>
+    <h2 class="text-4xl font-extrabold mb-8">Genspark Meetup Seoul</h2>
+    <div class="bg-white p-6 rounded-3xl shadow-2xl mb-6">
+      <canvas id="pitchQR" width="380" height="380"></canvas>
+    </div>
+    <p class="font-mono text-slate-400 text-lg" id="qrUrl"></p>
+    <div class="mt-6 bg-white/10 px-5 py-2 rounded-full">
+      <span>🟢</span> <span id="liveCount">0</span> connected so far
+    </div>
+    <a href="/e/genspark-meetup-seoul/screen" target="_blank" class="mt-8 text-violet-300 underline text-sm">Open full big-screen mode ↗</a>
+  </section>
+
+  <!-- Slide 7: Stack -->
+  <section class="slide fade-in text-center max-w-5xl mx-auto">
+    <div class="text-sm uppercase tracking-widest text-violet-300 mb-4">Built with</div>
+    <h2 class="text-5xl font-extrabold mb-12">Edge-first. No backend to babysit.</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
+      <div class="bg-white/5 border border-white/10 rounded-xl p-5">
+        <div class="text-2xl mb-2">☁️</div>
+        <div class="font-bold">Cloudflare Pages</div>
+        <div class="text-slate-400 text-sm">edge functions</div>
+      </div>
+      <div class="bg-white/5 border border-white/10 rounded-xl p-5">
+        <div class="text-2xl mb-2">🗝</div>
+        <div class="font-bold">Cloudflare KV</div>
+        <div class="text-slate-400 text-sm">events + profiles</div>
+      </div>
+      <div class="bg-white/5 border border-white/10 rounded-xl p-5">
+        <div class="text-2xl mb-2">🤖</div>
+        <div class="font-bold">Genspark Claw</div>
+        <div class="text-slate-400 text-sm">shipped in ~1hr</div>
+      </div>
+      <div class="bg-white/5 border border-white/10 rounded-xl p-5">
+        <div class="text-2xl mb-2">📡</div>
+        <div class="font-bold">OG + JSON-LD</div>
+        <div class="text-slate-400 text-sm">link-only signup</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 8: Roadmap -->
+  <section class="slide fade-in text-center max-w-5xl mx-auto">
+    <div class="text-sm uppercase tracking-widest text-violet-300 mb-4">What's next</div>
+    <h2 class="text-5xl font-extrabold mb-12">After the after-meet.</h2>
+    <ul class="text-2xl text-left space-y-4 max-w-2xl mx-auto">
+      <li>💬 <b>DMs & group chats</b> tied to the event</li>
+      <li>🔁 <b>Cross-event identity</b> — your aftermeet profile follows you</li>
+      <li>🔔 <b>Follow-up nudges</b> — "ping the 3 you said you'd reach out to"</li>
+      <li>🔗 <b>Native integrations</b> — Luma, CV, Eventbrite import</li>
+    </ul>
+  </section>
+
+  <!-- Slide 9: Final -->
+  <section class="slide fade-in text-center">
+    <div class="text-8xl mb-8">🤝</div>
+    <h2 class="text-6xl font-extrabold glow mb-6">aftermeet.tmcowork.com</h2>
+    <p class="text-3xl text-slate-300 mb-12">The meet doesn't end after the meet.</p>
+    <div class="flex gap-4 flex-wrap justify-center text-lg">
+      <a href="/host" class="px-6 py-3 bg-violet-500 hover:bg-violet-400 rounded-full font-semibold">Try as host</a>
+      <a href="https://github.com/johnjheejin/aftermeet" target="_blank" class="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-full font-semibold">View source ↗</a>
+    </div>
+    <p class="text-sm text-slate-500 mt-16">Thank you, Genspark Meetup Seoul.</p>
+  </section>
+
+</div>
+
+<!-- Progress dots -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-50" id="dots"></div>
+
+<!-- Help -->
+<div class="absolute bottom-6 right-6 text-xs text-slate-500 z-50">
+  <span class="kbd">←</span> <span class="kbd">→</span> navigate · <span class="kbd">F</span> fullscreen
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsEl = document.getElementById('dots');
+  let i = 0;
+
+  // build dots
+  slides.forEach((_, idx) => {
+    const d = document.createElement('button');
+    d.className = 'w-2 h-2 rounded-full bg-white/20 hover:bg-white/40 transition';
+    d.onclick = () => go(idx);
+    dotsEl.appendChild(d);
+  });
+
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+    [...dotsEl.children].forEach((d, idx) => {
+      d.className = (idx === i)
+        ? 'w-6 h-2 rounded-full bg-violet-400 transition'
+        : 'w-2 h-2 rounded-full bg-white/20 hover:bg-white/40 transition';
+    });
+    // update hash for resuming
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(i + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(i - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  // tap right/left half to navigate
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('a,button')) return;
+    if (e.clientX > window.innerWidth * 0.6) go(i + 1);
+    else if (e.clientX < window.innerWidth * 0.4) go(i - 1);
+  });
+
+  // resume from hash
+  const initial = parseInt(location.hash.replace('#',''), 10);
+  if (initial && initial > 0) go(initial - 1);
+  else go(0);
+
+  // QR for demo slide
+  const joinUrl = window.location.origin + '/e/genspark-meetup-seoul/join';
+  document.getElementById('qrUrl').textContent = joinUrl.replace(/^https?:\/\//, '');
+  QRCode.toCanvas(document.getElementById('pitchQR'), joinUrl, {
+    width: 380, margin: 1, color: { dark: '#000', light: '#fff' }
+  });
+
+  // Live participant count
+  async function refresh() {
+    try {
+      const r = await fetch('/api/events?slug=genspark-meetup-seoul');
+      if (r.ok) {
+        const d = await r.json();
+        document.getElementById('liveCount').textContent = (d.event.participantIds || []).length;
+      }
+    } catch {}
+  }
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>
