@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>aftermeet · pitch</title>
+<title>aftermeet · 피치</title>
 <link rel="stylesheet" href="/style.css" />
 <style>
   html, body { height: 100%; overflow: hidden; margin: 0; }
@@ -11,28 +11,32 @@
   .slide.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
   .slide > * { max-width: 1100px; }
   .slide .eyebrow { margin-bottom: 18px; }
-  .slide h1, .slide h2 { font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
-  .slide h1.huge { font-size: clamp(64px, 10vw, 140px); }
-  .slide h2 { font-size: clamp(40px, 6vw, 84px); }
-  .slide p.lede { font-size: clamp(20px, 2.4vw, 34px); color: var(--text-muted); margin-top: 18px; line-height: 1.4; }
-  .slide p.kicker { font-size: clamp(16px, 1.4vw, 20px); color: var(--text-dim); margin-top: 36px; }
+  .slide h1, .slide h2 { font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; }
+  .slide h1.huge { font-size: clamp(64px, 10vw, 140px); letter-spacing: -0.04em; }
+  .slide h2 { font-size: clamp(36px, 5.5vw, 76px); }
+  .slide p.lede { font-size: clamp(20px, 2.4vw, 32px); color: var(--text-muted); margin-top: 18px; line-height: 1.4; }
+  .slide p.kicker { font-size: clamp(15px, 1.3vw, 19px); color: var(--text-dim); margin-top: 32px; }
+  .subline-en { display: block; font-size: clamp(14px, 1.2vw, 18px); color: var(--text-dim); font-weight: 400; letter-spacing: 0; margin-top: 14px; font-family: -apple-system, "Inter", system-ui, sans-serif; }
+  .inline-en { color: var(--text-dim); font-size: 0.5em; font-weight: 400; letter-spacing: 0.02em; margin-left: 10px; vertical-align: middle; }
 
   .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 40px; }
   .feature-grid .card-flat { text-align: left; padding: 28px; }
   .feature-grid h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
-  .feature-grid p { color: var(--text-muted); font-size: 15px; line-height: 1.5; }
+  .feature-grid p { color: var(--text-muted); font-size: 15px; line-height: 1.55; }
+  .feature-grid p.en { color: var(--text-dim); font-size: 12px; margin-top: 8px; line-height: 1.4; font-style: italic; }
   .feature-num { font-family: ui-monospace, monospace; font-size: 13px; color: var(--accent); margin-bottom: 14px; }
 
   .stack-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 32px; }
   .stack-grid .card-flat { padding: 22px; text-align: left; }
-  .stack-grid h4 { font-size: 16px; font-weight: 600; }
-  .stack-grid p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .stack-grid h4 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .stack-grid p { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
-  .roadmap { text-align: left; max-width: 720px; margin: 32px auto 0; font-size: 22px; line-height: 1.8; }
+  .roadmap { text-align: left; max-width: 760px; margin: 32px auto 0; font-size: 21px; line-height: 1.8; padding: 0; }
   .roadmap li { padding: 14px 0; border-bottom: 1px solid var(--border); list-style: none; }
   .roadmap li:last-child { border-bottom: 0; }
   .roadmap li b { font-weight: 700; }
-  .roadmap li .arrow { color: var(--accent); margin-right: 8px; font-family: ui-monospace, monospace; }
+  .roadmap li .arrow { color: var(--accent); margin-right: 10px; font-family: ui-monospace, monospace; }
+  .roadmap li .en { display: block; color: var(--text-dim); font-size: 13px; font-style: italic; margin-top: 4px; margin-left: 32px; }
 
   .qr-slide-grid { display: grid; place-items: center; gap: 20px; }
   .qr-slide-grid .qr-card { padding: 24px; border-radius: 28px; }
@@ -40,15 +44,17 @@
 
   .ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
 
-  /* progress dots */
   #dots { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 50; }
   #dots button { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.12); border: 0; padding: 0; cursor: pointer; transition: all 250ms var(--ease); }
   #dots button.active { width: 20px; background: var(--accent); }
 
   .help { position: fixed; bottom: 24px; right: 28px; font-size: 11px; color: var(--text-dim); z-index: 50; }
   .help .kbd { margin: 0 2px; }
+  .help .ko { display: block; margin-top: 4px; }
 
   .top-brand { position: fixed; top: 24px; left: 28px; z-index: 50; font-size: 14px; opacity: 0.6; }
+
+  .accent { color: var(--accent-hi); font-weight: 700; }
 
   @media (max-width: 720px) {
     .feature-grid, .stack-grid { grid-template-columns: 1fr; }
@@ -61,56 +67,67 @@
 
 <!-- 1: Title -->
 <section class="slide active rise-stagger">
-  <div class="eyebrow">SEOUL · MAY 2026 · v0.1</div>
+  <div class="eyebrow">SEOUL · 2026.05 · v0.1</div>
   <h1 class="huge glow">aftermeet</h1>
-  <p class="lede">The meet doesn't end after the meet.</p>
-  <p class="kicker">Press <span class="kbd">→</span> to begin</p>
+  <p class="lede">행사는 끝나도, 만남은 끝나지 않게.
+    <span class="subline-en">The meet doesn't end after the meet.</span>
+  </p>
+  <p class="kicker"><span class="kbd">→</span> 를 눌러 시작</p>
 </section>
 
 <!-- 2: Problem -->
 <section class="slide rise-stagger">
-  <div class="eyebrow">THE PROBLEM</div>
-  <h2>You meet 50 people<br/>at an event.</h2>
-  <p class="lede">Two weeks later, you remember <span style="color:var(--accent-hi);font-weight:700;">three</span>.</p>
-  <p class="kicker">Luma pages close. Slack channels die. Cards stay in drawers.</p>
+  <div class="eyebrow">문제 · THE PROBLEM</div>
+  <h2>행사에서 50명을 만났는데,</h2>
+  <p class="lede">2주 뒤에 기억나는 사람은 <span class="accent">세 명</span>.
+    <span class="subline-en">You meet 50 people. Two weeks later, you remember three.</span>
+  </p>
+  <p class="kicker">Luma 페이지는 닫히고, Slack 채널은 죽고, 명함은 서랍에 있죠.</p>
 </section>
 
 <!-- 3: Insight -->
 <section class="slide rise-stagger">
-  <div class="eyebrow">THE INSIGHT</div>
-  <h2>The event ends.<br/><span style="color:var(--accent-hi);">The relationships shouldn't.</span></h2>
-  <p class="lede">What's missing is a persistent surface, tied to the event itself.</p>
+  <div class="eyebrow">통찰 · THE INSIGHT</div>
+  <h2>행사는 끝나도<br/><span class="accent">관계까지 끝날 필요는 없잖아요.</span></h2>
+  <p class="lede">행사 그 자체에 묶인 <em style="font-style:normal;color:var(--text);">지속적인 공간</em>이 필요합니다.
+    <span class="subline-en">The event ends. The relationships shouldn't. We need a persistent surface, tied to the event itself.</span>
+  </p>
 </section>
 
 <!-- 4: Solution -->
 <section class="slide rise-stagger">
-  <div class="eyebrow">AFTERMEET</div>
-  <h2>One QR. Zero friction.</h2>
+  <div class="eyebrow">솔루션 · AFTERMEET</div>
+  <h2>QR 하나로, 마찰 없이.<span class="inline-en">One QR. Zero friction.</span></h2>
   <div class="feature-grid">
     <div class="card-flat">
       <div class="feature-num">01</div>
-      <h3>Host pastes</h3>
-      <p>a Luma or Cerebral Valley link. Page generates in seconds.</p>
+      <h3>호스트가 링크를 붙여넣고</h3>
+      <p>Luma나 Cerebral Valley URL이면 됩니다. 페이지는 몇 초 안에 생성.</p>
+      <p class="en">Host pastes a Luma / CV link. Page generates in seconds.</p>
     </div>
     <div class="card-flat">
       <div class="feature-num">02</div>
-      <h3>Crowd scans</h3>
-      <p>QR on the projector. Drop your LinkedIn / X. Profile auto-fills.</p>
+      <h3>참석자는 QR을 스캔하고</h3>
+      <p>본인 LinkedIn이나 X 링크만 붙여넣으면, 프로필은 자동으로 채워져요.</p>
+      <p class="en">Crowd scans, drops LinkedIn or X — profile auto-fills.</p>
     </div>
     <div class="card-flat">
       <div class="feature-num">03</div>
-      <h3>Page persists</h3>
-      <p>The participant grid lives on. Forever. Bookmarkable.</p>
+      <h3>페이지는 계속 살아있어요</h3>
+      <p>참여자 명단은 영구 유지. 북마크해두고 1년 뒤에도 다시 보세요.</p>
+      <p class="en">The page persists. Forever. Bookmarkable.</p>
     </div>
   </div>
 </section>
 
 <!-- 5: Demo trigger -->
 <section class="slide rise-stagger">
-  <div class="eyebrow">LIVE DEMO</div>
-  <h2>Let's onboard <span style="color:var(--accent-hi);">this room</span><br/>right now.</h2>
-  <p class="lede">Press <span class="kbd">→</span> to bring up the QR.</p>
-  <p class="kicker">Have your LinkedIn or X handle ready.</p>
+  <div class="eyebrow">라이브 데모 · LIVE DEMO</div>
+  <h2>지금, <span class="accent">이 자리에서</span><br/>바로 등록해봅시다.</h2>
+  <p class="lede">다음 슬라이드에서 QR이 나옵니다.
+    <span class="subline-en">Let's onboard this room right now.</span>
+  </p>
+  <p class="kicker">LinkedIn 또는 X 링크를 준비해주세요.</p>
 </section>
 
 <!-- 6: QR -->
@@ -122,49 +139,66 @@
   <p class="mono muted" id="qrUrl"></p>
   <div class="chip chip-live" style="font-size:15px;padding:8px 16px;">
     <span class="dot-live"></span>
-    <span class="mono"><span id="liveCount">0</span> connected</span>
+    <span class="mono"><span id="liveCount">0</span>명 등록됨</span>
   </div>
-  <a href="/e/genspark-meetup-seoul" target="_blank" class="kicker" style="color:var(--text-muted);text-decoration:underline;">See the participant page ↗</a>
+  <a href="/e/genspark-meetup-seoul" target="_blank" class="kicker" style="color:var(--text-muted);text-decoration:underline;">참여자 페이지 보기 ↗</a>
 </section>
 
 <!-- 7: Stack -->
 <section class="slide rise-stagger">
-  <div class="eyebrow">BUILT WITH</div>
-  <h2>Edge-first.<br/>No backend to babysit.</h2>
+  <div class="eyebrow">기술 스택 · BUILT WITH</div>
+  <h2>엣지 우선. 관리할 백엔드 없음.<span class="inline-en">Edge-first. No backend to babysit.</span></h2>
   <div class="stack-grid">
-    <div class="card-flat"><h4>☁️ Cloudflare Pages</h4><p>edge functions</p></div>
-    <div class="card-flat"><h4>🗝 Cloudflare KV</h4><p>events + profiles</p></div>
-    <div class="card-flat"><h4>🤖 Genspark Claw</h4><p>shipped in ~1hr</p></div>
-    <div class="card-flat"><h4>📡 OG + JSON-LD</h4><p>link-only signup</p></div>
+    <div class="card-flat"><h4>☁️ Cloudflare Pages</h4><p>엣지 함수 · edge functions</p></div>
+    <div class="card-flat"><h4>🗝 Cloudflare KV</h4><p>이벤트 + 프로필 저장</p></div>
+    <div class="card-flat"><h4>🤖 Genspark Claw</h4><p>약 1시간만에 완성</p></div>
+    <div class="card-flat"><h4>📡 OG + JSON-LD</h4><p>링크만으로 가입</p></div>
   </div>
 </section>
 
 <!-- 8: Roadmap -->
 <section class="slide rise-stagger">
-  <div class="eyebrow">WHAT'S NEXT</div>
-  <h2>After the after-meet.</h2>
+  <div class="eyebrow">앞으로 · WHAT'S NEXT</div>
+  <h2>after-meet의 그 다음.<span class="inline-en">After the after-meet.</span></h2>
   <ul class="roadmap">
-    <li><span class="arrow">→</span> <b>DMs & group chats</b> tied to the event</li>
-    <li><span class="arrow">→</span> <b>Cross-event identity</b> — your profile follows you</li>
-    <li><span class="arrow">→</span> <b>Follow-up nudges</b> — ping the 3 you said you'd reach out to</li>
-    <li><span class="arrow">→</span> <b>Native integrations</b> — Luma, CV, Eventbrite</li>
+    <li>
+      <span class="arrow">→</span> <b>DM과 그룹챗</b> — 행사에 종속된 채팅
+      <span class="en">DMs & group chats tied to the event</span>
+    </li>
+    <li>
+      <span class="arrow">→</span> <b>크로스 이벤트 정체성</b> — 내 프로필이 행사를 따라다님
+      <span class="en">Cross-event identity — your profile follows you</span>
+    </li>
+    <li>
+      <span class="arrow">→</span> <b>팔로업 리마인더</b> — "연락하기로 했던 3명에게 인사하세요"
+      <span class="en">Follow-up nudges — ping the 3 you said you'd reach out to</span>
+    </li>
+    <li>
+      <span class="arrow">→</span> <b>네이티브 통합</b> — Luma, CV, Eventbrite 직접 연동
+      <span class="en">Native integrations — Luma, CV, Eventbrite</span>
+    </li>
   </ul>
 </section>
 
 <!-- 9: Closing -->
 <section class="slide rise-stagger">
-  <div class="eyebrow">THANK YOU</div>
-  <h1 class="huge glow" style="font-size:clamp(40px,7vw,96px);">aftermeet.tmcowork.com</h1>
-  <p class="lede">The meet doesn't end after the meet.</p>
+  <div class="eyebrow">감사합니다 · THANK YOU</div>
+  <h1 class="huge glow" style="font-size:clamp(36px,6.5vw,84px);">aftermeet.tmcowork.com</h1>
+  <p class="lede">행사는 끝나도, 만남은 끝나지 않게.
+    <span class="subline-en">The meet doesn't end after the meet.</span>
+  </p>
   <div class="ctas">
-    <a href="/host" class="btn btn-primary">Try as host</a>
-    <a href="https://github.com/johnjheejin/aftermeet" target="_blank" class="btn btn-ghost">View source ↗</a>
+    <a href="/host" class="btn btn-primary">호스트로 시작하기</a>
+    <a href="https://github.com/johnjheejin/aftermeet" target="_blank" class="btn btn-ghost">소스 보기 ↗</a>
   </div>
-  <p class="kicker">Made at Genspark Meetup Seoul · 🤝</p>
+  <p class="kicker">Genspark Meetup Seoul에서 만들었어요 · 🤝</p>
 </section>
 
 <div id="dots"></div>
-<div class="help"><span class="kbd">←</span> <span class="kbd">→</span> navigate · <span class="kbd">F</span> fullscreen</div>
+<div class="help">
+  <span class="kbd">←</span> <span class="kbd">→</span> 이동 · <span class="kbd">F</span> 전체화면
+  <span class="ko" style="opacity:.6;">navigate · fullscreen</span>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
@@ -205,7 +239,6 @@
   const initial = parseInt(location.hash.replace('#',''), 10);
   if (initial && initial > 0) go(initial - 1); else go(0);
 
-  // QR
   const joinUrl = window.location.origin + '/e/genspark-meetup-seoul/join';
   document.getElementById('qrUrl').textContent = joinUrl.replace(/^https?:\/\//, '');
   QRCode.toCanvas(document.getElementById('pitchQR'), joinUrl, {
