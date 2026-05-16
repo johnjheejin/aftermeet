@@ -134,7 +134,7 @@
 <section class="slide qr-slide-grid">
   <div class="eyebrow">GENSPARK MEETUP SEOUL · LIVE</div>
   <div class="qr-card">
-    <canvas id="pitchQR" width="400" height="400"></canvas>
+    <img id="pitchQR" width="400" height="400" alt="QR code to join" />
   </div>
   <p class="mono muted" id="qrUrl"></p>
   <div class="chip chip-live" style="font-size:15px;padding:8px 16px;">
@@ -200,7 +200,6 @@
   <span class="ko" style="opacity:.6;">navigate · fullscreen</span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
   const slides = document.querySelectorAll('.slide');
   const dotsEl = document.getElementById('dots');
@@ -241,9 +240,8 @@
 
   const joinUrl = window.location.origin + '/e/genspark-meetup-seoul/join';
   document.getElementById('qrUrl').textContent = joinUrl.replace(/^https?:\/\//, '');
-  QRCode.toCanvas(document.getElementById('pitchQR'), joinUrl, {
-    width: 400, margin: 1, color: { dark: '#07070C', light: '#FFFFFF' }
-  });
+  document.getElementById('pitchQR').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=8&data=' + encodeURIComponent(joinUrl);
 
   async function refresh() {
     try {

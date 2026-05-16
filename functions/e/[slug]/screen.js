@@ -16,7 +16,6 @@ export async function onRequestGet({ params, env, request }) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${escapeHtml(event.title)} · aftermeet</title>
 <link rel="stylesheet" href="/style.css" />
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
   html, body { height: 100%; overflow: hidden; }
   .screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; gap: 28px; }
@@ -44,7 +43,9 @@ export async function onRequestGet({ params, env, request }) {
   </div>
 
   <div class="qr-wrap">
-    <canvas id="qr" width="420" height="420"></canvas>
+    <img id="qr" width="420" height="420"
+         alt="QR code to join"
+         src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=8&data=${encodeURIComponent(joinUrl)}" />
   </div>
 
   <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;">
@@ -62,11 +63,6 @@ export async function onRequestGet({ params, env, request }) {
 <a href="/e/${slug}" class="footer-link">See participants →</a>
 
 <script>
-QRCode.toCanvas(document.getElementById('qr'), ${JSON.stringify(joinUrl)}, {
-  width: 420, margin: 1,
-  color: { dark: '#07070C', light: '#FFFFFF' }
-});
-
 async function refresh() {
   try {
     const r = await fetch('/api/events?slug=${slug}');
