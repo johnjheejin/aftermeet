@@ -2,7 +2,7 @@
 
 > For human and AI QA agents. Run this top-to-bottom to validate a deploy.
 
-**Live URL:** https://aftermeet.pages.dev
+**Live URL:** https://aftermeet.tmcowork.com
 **Repo:** https://github.com/johnjheejin/aftermeet
 **Stack:** Cloudflare Pages + Pages Functions + KV (see `AGENTS.md` style notes in `DESIGN.md`)
 

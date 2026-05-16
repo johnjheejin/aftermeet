@@ -5,7 +5,7 @@
 #   BASE=http://localhost:8788 ./tests/smoke.sh   # against local dev
 set -uo pipefail
 
-BASE="${BASE:-https://aftermeet.pages.dev}"
+BASE="${BASE:-https://aftermeet.tmcowork.com}"
 EVENT_URL="${EVENT_URL:-https://cerebralvalley.ai/e/genspark-meetup-seoul}"
 EXPECT_SLUG="${EXPECT_SLUG:-genspark-meetup-seoul}"
 PROFILE_URL="${PROFILE_URL:-https://github.com/torvalds}"
