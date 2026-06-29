@@ -13,7 +13,7 @@ export async function onRequestGet({ params, env, request }) {
     youJoining: t(L, { ko: '참여 중인 행사', en: "YOU'RE JOINING" }),
     profileLabel: t(L, { ko: '본인 프로필 링크', en: 'Your profile link' }),
     profilePh: t(L, { ko: 'linkedin.com/in/you · x.com/you · github.com/you', en: 'linkedin.com/in/you · x.com/you · github.com/you' }),
-    profileHint: t(L, { ko: 'LinkedIn, X, GitHub, 또는 본인 사이트. 나머지는 자동으로 채워드려요.', en: 'LinkedIn, X, GitHub, or your personal site. We auto-fill the rest.' }),
+    profileHint: t(L, { ko: 'LinkedIn, X, GitHub, Facebook, 또는 본인 사이트. 나머지는 자동으로 채워드려요.', en: 'LinkedIn, X, GitHub, Facebook, or your personal site. We auto-fill the rest.' }),
     detailsSummary: t(L, { ko: '이름이나 한 줄 소개 추가하기', en: 'Add a custom name or one-liner' }),
     namePh: t(L, { ko: '표시할 이름 (선택)', en: 'Display name (optional)' }),
     notePh: t(L, { ko: '요즘 뭐 하고 계세요? (한 줄)', en: "What are you working on? (one line)" }),
@@ -21,6 +21,8 @@ export async function onRequestGet({ params, env, request }) {
     connecting: t(L, { ko: '연결 중…', en: 'Connecting…' }),
     successH: t(L, { ko: '연결됐어요.', en: "You're in." }),
     successP: t(L, { ko: '다른 참여자들도 확인해보세요. 페이지를 북마크해두면 행사 후에도 다시 올 수 있어요.', en: 'See who else is here, and bookmark the page — it stays after the meet.' }),
+    alreadyH: t(L, { ko: '이미 참여되어 있어요.', en: 'You were already in.' }),
+    alreadyP: t(L, { ko: '같은 프로필 링크로 다시 들어왔어요. 참여자 페이지에서 이어서 보시면 됩니다.', en: 'That profile link was already connected. Continue from the participant page.' }),
     successBtn: t(L, { ko: '참여자 보기 →', en: 'View participants →' }),
   };
 
@@ -97,8 +99,8 @@ export async function onRequestGet({ params, env, request }) {
 
   <div id="success" class="success rise" style="display:none;">
     <div class="success-emoji">🤝</div>
-    <h2>${escapeHtml(S.successH)}</h2>
-    <p>${escapeHtml(S.successP)}</p>
+    <h2 id="successHeading">${escapeHtml(S.successH)}</h2>
+    <p id="successBody">${escapeHtml(S.successP)}</p>
     <a href="/e/${slug}" class="btn btn-primary">${escapeHtml(S.successBtn)}</a>
   </div>
 </main>
@@ -108,13 +110,19 @@ const form = document.getElementById('joinForm');
 const btn = document.getElementById('submitBtn');
 const statusEl = document.getElementById('status');
 const successEl = document.getElementById('success');
+const successHeadingEl = document.getElementById('successHeading');
+const successBodyEl = document.getElementById('successBody');
 const SUBMIT_LABEL = ${JSON.stringify(S.submit)};
 const CONNECTING_LABEL = ${JSON.stringify(S.connecting)};
+const SUCCESS_H = ${JSON.stringify(S.successH)};
+const SUCCESS_P = ${JSON.stringify(S.successP)};
+const ALREADY_H = ${JSON.stringify(S.alreadyH)};
+const ALREADY_P = ${JSON.stringify(S.alreadyP)};
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   let profileUrl = document.getElementById('profileUrl').value.trim();
-  if (profileUrl && !/^https?:\\/\\//i.test(profileUrl)) profileUrl = 'https://' + profileUrl;
+  if (profileUrl && !/^https?:\/\//i.test(profileUrl)) profileUrl = 'https://' + profileUrl;
 
   btn.disabled = true;
   btn.textContent = CONNECTING_LABEL;
@@ -133,6 +141,13 @@ form.addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
+    if (data.joinStatus === 'already_joined') {
+      successHeadingEl.textContent = ALREADY_H;
+      successBodyEl.textContent = ALREADY_P;
+    } else {
+      successHeadingEl.textContent = SUCCESS_H;
+      successBodyEl.textContent = SUCCESS_P;
+    }
     form.style.display = 'none';
     successEl.style.display = 'block';
   } catch (err) {
@@ -146,7 +161,6 @@ form.addEventListener('submit', async (e) => {
 </html>`;
 
   const headers = { 'Content-Type': 'text/html; charset=utf-8' };
-  // Sticky cookie if ?lang= was used
   const url = new URL(request.url);
   if (url.searchParams.get('lang') === 'ko' || url.searchParams.get('lang') === 'en') {
     headers['Set-Cookie'] = `aftermeet_lang=${url.searchParams.get('lang')}; Path=/; Max-Age=31536000; SameSite=Lax`;

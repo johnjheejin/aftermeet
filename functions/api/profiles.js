@@ -9,36 +9,49 @@ export async function onRequestPost({ request, env }) {
     if (!eventRaw) return json({ error: 'event not found' }, 404);
     const event = JSON.parse(eventRaw);
 
-    const profileId = hashId(profileUrl);
-    const existing = await env.PROFILES.get(`profile:${profileId}`);
-    let profile;
-    if (existing) {
-      profile = JSON.parse(existing);
+    const rawUrl = normalizeInputUrl(profileUrl);
+    const canonicalUrl = canonicalizeProfileUrl(rawUrl);
+    const profileId = hashId(canonicalUrl);
+
+    let profile = await findExistingProfile(env, event, rawUrl, canonicalUrl, profileId);
+    const joinStatus = event.participantIds.includes(profileId) ? 'already_joined' : 'joined';
+
+    if (profile) {
+      profile.id = profileId;
+      profile.url = profile.url || rawUrl;
+      profile.canonicalUrl = canonicalUrl;
+      if (displayName) profile.name = displayName;
+      if (note) profile.note = note;
+      if (!profile.platform) profile.platform = detectPlatform(canonicalUrl);
+      if (!profile.events.includes(eventSlug)) profile.events.push(eventSlug);
+      profile.updatedAt = new Date().toISOString();
     } else {
-      const parsed = await parseProfile(profileUrl);
+      const parsed = await parseProfile(canonicalUrl);
       profile = {
         id: profileId,
-        url: profileUrl,
-        name: displayName || parsed.name || extractHandle(profileUrl),
+        url: rawUrl,
+        canonicalUrl,
+        name: displayName || parsed.name || extractHandle(canonicalUrl),
         title: parsed.title || '',
         bio: parsed.bio || '',
         avatar: parsed.avatar || null,
         platform: parsed.platform,
         note: note || '',
         createdAt: new Date().toISOString(),
-        events: [],
+        updatedAt: new Date().toISOString(),
+        events: [eventSlug],
       };
     }
 
-    if (!profile.events.includes(eventSlug)) profile.events.push(eventSlug);
     await env.PROFILES.put(`profile:${profileId}`, JSON.stringify(profile));
 
     if (!event.participantIds.includes(profileId)) {
       event.participantIds.push(profileId);
+      event.updatedAt = new Date().toISOString();
       await env.EVENTS.put(`event:${eventSlug}`, JSON.stringify(event));
     }
 
-    return json({ profile, eventSlug });
+    return json({ profile, eventSlug, joinStatus });
   } catch (e) {
     return json({ error: e.message || 'Server error' }, 500);
   }
@@ -51,16 +64,68 @@ function json(data, status = 200) {
   });
 }
 
+async function findExistingProfile(env, event, rawUrl, canonicalUrl, profileId) {
+  const idsToTry = [profileId, hashId(rawUrl)];
+  for (const id of idsToTry) {
+    const existing = await env.PROFILES.get(`profile:${id}`);
+    if (existing) return JSON.parse(existing);
+  }
+
+  for (const pid of event.participantIds || []) {
+    const raw = await env.PROFILES.get(`profile:${pid}`);
+    if (!raw) continue;
+    const profile = JSON.parse(raw);
+    const currentCanonical = canonicalizeProfileUrl(profile.canonicalUrl || profile.url || '');
+    if (currentCanonical && currentCanonical === canonicalUrl) return profile;
+  }
+
+  return null;
+}
+
 function hashId(s) {
-  // simple deterministic id from URL
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
   return Math.abs(h).toString(36) + s.length.toString(36);
 }
 
+function normalizeInputUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) throw new Error('profileUrl required');
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function canonicalizeProfileUrl(url) {
+  const u = new URL(normalizeInputUrl(url));
+  let host = u.hostname.toLowerCase().replace(/^www\./, '');
+  if (host === 'twitter.com' || host === 'mobile.twitter.com') host = 'x.com';
+  if (host === 'm.facebook.com') host = 'facebook.com';
+
+  let path = u.pathname.replace(/\/+$/, '') || '/';
+  const parts = path.split('/').filter(Boolean);
+
+  if (host === 'github.com' && parts[0]) {
+    path = `/${parts[0].toLowerCase()}`;
+  } else if (host === 'x.com' && parts[0]) {
+    path = `/${parts[0].replace(/^@/, '').toLowerCase()}`;
+  } else if (host.includes('linkedin.com')) {
+    if (parts[0] === 'in' && parts[1]) path = `/in/${parts[1].toLowerCase()}`;
+    else if (parts[0] === 'company' && parts[1]) path = `/company/${parts[1].toLowerCase()}`;
+  } else if (host.includes('facebook.com')) {
+    if (parts[0] === 'profile.php') {
+      const id = u.searchParams.get('id');
+      path = id ? `/profile.php?id=${id}` : '/profile.php';
+    } else if (parts[0]) {
+      path = `/${parts[0].toLowerCase()}`;
+    }
+  }
+
+  return `https://${host}${path === '/' ? '' : path}`;
+}
+
 function extractHandle(url) {
   try {
     const u = new URL(url);
+    if (u.pathname === '/profile.php' && u.searchParams.get('id')) return `facebook:${u.searchParams.get('id')}`;
     const parts = u.pathname.split('/').filter(Boolean);
     return parts[parts.length - 1] || u.hostname;
   } catch {
@@ -68,16 +133,22 @@ function extractHandle(url) {
   }
 }
 
+function detectPlatform(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    if (host.includes('linkedin')) return 'linkedin';
+    if (host.includes('twitter') || host === 'x.com') return 'x';
+    if (host.includes('github')) return 'github';
+    if (host.includes('threads')) return 'threads';
+    if (host.includes('facebook') || host === 'fb.com') return 'facebook';
+  } catch {}
+  return 'web';
+}
+
 async function parseProfile(url) {
   const u = new URL(url);
-  const host = u.hostname.replace('www.', '');
-  let platform = 'web';
-  if (host.includes('linkedin')) platform = 'linkedin';
-  else if (host.includes('twitter') || host === 'x.com') platform = 'x';
-  else if (host.includes('github')) platform = 'github';
-  else if (host.includes('threads')) platform = 'threads';
+  const platform = detectPlatform(url);
 
-  // GitHub has a proper API — way better than scraping
   if (platform === 'github') {
     const handle = u.pathname.split('/').filter(Boolean)[0];
     if (handle) {
@@ -103,7 +174,6 @@ async function parseProfile(url) {
     }
   }
 
-  // Generic OG/meta scrape (works for personal sites, sometimes for X/LinkedIn public pages)
   try {
     const res = await fetch(url, {
       headers: {
@@ -128,23 +198,18 @@ async function parseProfile(url) {
       const avatar =
         get(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
         get(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
-      return { platform, name: cleanName(name, platform), title: '', bio, avatar };
+      return { platform, name: cleanName(name), title: '', bio, avatar };
     }
   } catch {}
 
   return { platform, name: null, title: '', bio: '', avatar: null };
 }
 
-function cleanName(n, platform) {
+function cleanName(n) {
   if (!n) return null;
   let s = String(n).trim();
-  // Strip common platform-suffix junk:
-  //  "Jane Doe (@jane) / X"  →  "Jane Doe"
-  //  "Jane Doe | LinkedIn"   →  "Jane Doe"
-  //  "torvalds - Overview"   →  "torvalds"   (GitHub OG title)
-  //  "Jane Doe · GitHub"     →  "Jane Doe"
   s = s.replace(/\s*\(@[^)]+\)\s*\/?\s*X?\s*$/, '');
-  s = s.replace(/\s*[\|\u00B7·-]\s*(LinkedIn|GitHub|Overview|X|Twitter|Threads)\s*$/i, '');
+  s = s.replace(/\s*[\|\u00B7·-]\s*(LinkedIn|GitHub|Overview|X|Twitter|Threads|Facebook)\s*$/i, '');
   s = s.replace(/\s*-\s*Overview\s*$/i, '');
   return s.trim() || null;
 }

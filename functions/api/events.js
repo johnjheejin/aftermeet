@@ -1,19 +1,24 @@
-// POST /api/events  { eventUrl, hostProfile? }
+// POST /api/events  { eventUrl, hostProfile?, followupUrl?, followupLabel? }
 // GET  /api/events?slug=xxx
 
 export async function onRequestPost({ request, env }) {
   try {
-    const { eventUrl, hostProfile } = await request.json();
+    const { eventUrl, hostProfile, followupUrl, followupLabel } = await request.json();
     if (!eventUrl) return json({ error: 'eventUrl required' }, 400);
 
-    const parsed = await parseEventUrl(eventUrl);
-    const slug = parsed.slug || slugifyFromUrl(eventUrl);
+    const normalizedEventUrl = normalizeUrl(eventUrl);
+    const parsed = await parseEventUrl(normalizedEventUrl);
+    const slug = parsed.slug || slugifyFromUrl(normalizedEventUrl);
 
-    // Check existing
     const existing = await env.EVENTS.get(`event:${slug}`);
     let event;
     if (existing) {
       event = JSON.parse(existing);
+      if (hostProfile) event.hostProfileUrl = normalizeOptionalUrl(hostProfile);
+      if (followupUrl) event.followupUrl = normalizeOptionalUrl(followupUrl);
+      if (followupLabel) event.followupLabel = String(followupLabel).trim();
+      event.updatedAt = new Date().toISOString();
+      await env.EVENTS.put(`event:${slug}`, JSON.stringify(event));
     } else {
       event = {
         slug,
@@ -22,10 +27,13 @@ export async function onRequestPost({ request, env }) {
         date: parsed.date,
         location: parsed.location,
         source: parsed.source,
-        sourceUrl: eventUrl,
+        sourceUrl: normalizedEventUrl,
         image: parsed.image,
-        hostProfileUrl: hostProfile || null,
+        hostProfileUrl: normalizeOptionalUrl(hostProfile),
+        followupUrl: normalizeOptionalUrl(followupUrl),
+        followupLabel: cleanOptionalText(followupLabel),
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         participantIds: [],
       };
       await env.EVENTS.put(`event:${slug}`, JSON.stringify(event));
@@ -44,7 +52,6 @@ export async function onRequestGet({ request, env }) {
   const raw = await env.EVENTS.get(`event:${slug}`);
   if (!raw) return json({ error: 'not found' }, 404);
   const event = JSON.parse(raw);
-  // Hydrate participants
   const participants = [];
   for (const pid of event.participantIds || []) {
     const p = await env.PROFILES.get(`profile:${pid}`);
@@ -58,6 +65,23 @@ function json(data, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
   });
+}
+
+function normalizeUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) throw new Error('eventUrl required');
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function normalizeOptionalUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) return null;
+  return normalizeUrl(value);
+}
+
+function cleanOptionalText(value) {
+  const text = String(value || '').trim();
+  return text || null;
 }
 
 function slugifyFromUrl(url) {
@@ -121,7 +145,6 @@ function extractMeta(html) {
     get(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
     get(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
 
-  // JSON-LD for date/location
   let date = null, location = null;
   const ldMatches = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   for (const m of ldMatches) {

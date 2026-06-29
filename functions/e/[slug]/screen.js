@@ -17,6 +17,7 @@ export async function onRequestGet({ params, env, request }) {
     scan: t(L, { ko: '📱 QR을 스캔하세요', en: '📱 Scan to join' }),
     connected: t(L, { ko: '명 연결됨', en: 'connected' }),
     seeAll: t(L, { ko: '참여자 보기 →', en: 'See participants →' }),
+    hostBack: t(L, { ko: '호스트 페이지로 →', en: 'Back to event →' }),
   };
 
   const html = `<!DOCTYPE html>
@@ -39,6 +40,7 @@ export async function onRequestGet({ params, env, request }) {
   .live-num { font-size: 22px; font-weight: 700; color: var(--accent-hi); margin: 0 4px; }
   .footer-link { position: fixed; bottom: 20px; right: 24px; font-size: 12px; color: var(--text-dim); text-decoration: none; }
   .footer-link:hover { color: var(--text-muted); }
+  .footer-link.left { right: auto; left: 24px; }
   .top-brand { position: fixed; top: 20px; left: 24px; }
 </style>
 </head>
@@ -70,6 +72,7 @@ export async function onRequestGet({ params, env, request }) {
   </div>
 </div>
 
+<a href="/e/${slug}" class="footer-link left">${escapeHtml(S.hostBack)}</a>
 <a href="/e/${slug}" class="footer-link">${escapeHtml(S.seeAll)}</a>
 
 <script>
