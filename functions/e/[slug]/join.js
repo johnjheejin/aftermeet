@@ -195,7 +195,7 @@ form.addEventListener('submit', async (e) => {
 
 function guessNameFromProfileUrl(value) {
   try {
-    const normalized = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+    const normalized = /^https?:\/\//i.test(value) ? value : 'https://' + value;
     const u = new URL(normalized);
     const parts = u.pathname.split('/').filter(Boolean);
     const raw = parts[parts.length - 1] || '';
