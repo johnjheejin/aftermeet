@@ -166,20 +166,17 @@ form.addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
-    if (data.joinStatus === 'already_joined') {
-      successHeadingEl.textContent = ALREADY_H;
-      successBodyEl.textContent = ALREADY_P;
-    } else if (data.joinState === 'pending') {
+    if (data.joinState === 'pending') {
       successHeadingEl.textContent = PENDING_H;
       successBodyEl.textContent = PENDING_P;
       const followupBtn = document.getElementById('followupBtn');
       if (followupBtn) followupBtn.remove();
-    } else {
-      successHeadingEl.textContent = SUCCESS_H;
-      successBodyEl.textContent = SUCCESS_P;
+      form.style.display = 'none';
+      successEl.style.display = 'block';
+      return;
     }
-    form.style.display = 'none';
-    successEl.style.display = 'block';
+
+    window.location.href = '/e/${slug}${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}';
   } catch (err) {
     statusEl.innerHTML = '<span class="err">' + err.message + '</span>';
     btn.disabled = false;
