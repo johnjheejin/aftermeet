@@ -193,7 +193,6 @@ form.addEventListener('submit', async (e) => {
 
 renderRecentEvents();
 prefillTargetEvent();
-prefillDeadline();
 
 function saveRecentEvent(event) {
   const items = loadRecentEvents().filter((item) => item.slug !== event.slug);
@@ -241,18 +240,8 @@ function prefillTargetEvent() {
   if (!input.value) input.value = 'https://luma.com/qo52rtw5';
 }
 
-function prefillDeadline() {
-  const input = document.getElementById('joinAutoApproveUntil');
-  if (input.value) return;
-  const d = new Date();
-  d.setHours(23, 59, 0, 0);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  input.value = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-}
+const deadlineInput = document.getElementById('joinAutoApproveUntil');
+if (!deadlineInput.value) deadlineInput.value = '2026-06-30T23:59';
 
 function escapeHtml(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
