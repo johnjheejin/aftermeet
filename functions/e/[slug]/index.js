@@ -7,16 +7,33 @@ export async function onRequestGet({ params, env, request }) {
   if (!raw) return new Response('Event not found', { status: 404 });
   const event = JSON.parse(raw);
   const L = detectLocale(request);
-  const baseUrl = new URL(request.url).origin;
+  const pageUrl = new URL(request.url);
+  const hostToken = pageUrl.searchParams.get('host') || '';
+  const isHost = Boolean(hostToken && event.hostToken && hostToken === event.hostToken);
+  const baseUrl = pageUrl.origin;
   const eventUrl = `${baseUrl}/e/${slug}`;
-  const screenUrl = `${eventUrl}/screen`;
-  const joinUrl = `${eventUrl}/join`;
+  const hostLink = isHost ? `${eventUrl}?host=${encodeURIComponent(hostToken)}` : eventUrl;
+  const screenUrl = `${eventUrl}/screen${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}`;
+  const joinUrl = `${eventUrl}/join${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}`;
 
-  const participants = [];
+  const approved = [];
+  const pending = [];
+  const hidden = [];
+
   for (const pid of event.participantIds || []) {
     const p = await env.PROFILES.get(`profile:${pid}`);
-    if (p) participants.push(JSON.parse(p));
+    if (!p) continue;
+    const profile = JSON.parse(p);
+    const membership = getMembership(profile, slug);
+    const enriched = { ...profile, membership };
+    if (membership.joinState === 'pending') pending.push(enriched);
+    else if (membership.joinState === 'hidden') hidden.push(enriched);
+    else approved.push(enriched);
   }
+
+  approved.sort(sortProfiles);
+  pending.sort(sortProfiles);
+  hidden.sort(sortProfiles);
 
   const S = {
     persistent: t(L, { ko: '지속 페이지', en: 'PERSISTENT' }),
@@ -24,16 +41,29 @@ export async function onRequestGet({ params, env, request }) {
     joinBtn: t(L, { ko: '+ 참여하기', en: '+ Join' }),
     copyJoinBtn: t(L, { ko: '🔗 참여 링크 복사', en: '🔗 Copy join link' }),
     copyEventBtn: t(L, { ko: '📎 행사 링크 복사', en: '📎 Copy event link' }),
+    copyHostBtn: t(L, { ko: '🛠 관리 링크 복사', en: '🛠 Copy host link' }),
     copied: t(L, { ko: '복사됨', en: 'Copied' }),
     people: (n) => t(L, { ko: `${n}명`, en: `${n} ${n === 1 ? 'person' : 'people'}` }),
     original: t(L, { ko: '원본 행사 ↗', en: 'Original ↗' }),
     materials: t(L, { ko: event.followupLabel || '행사 자료 보기 ↗', en: event.followupLabel || 'View follow-up ↗' }),
     hostTools: t(L, { ko: '호스트 도구', en: 'HOST TOOLS' }),
     hostHint: t(L, { ko: '이 페이지를 북마크해두면 행사 뒤에도 다시 돌아오기 쉬워요.', en: 'Bookmark this page so you can get back here after the event.' }),
+    autoUntil: t(L, { ko: '자동 승인 마감', en: 'Auto-approve until' }),
+    approvedBadge: t(L, { ko: '공개됨', en: 'Approved' }),
+    pendingBadge: t(L, { ko: '승인 대기', en: 'Pending' }),
+    hiddenBadge: t(L, { ko: '숨김', en: 'Hidden' }),
+    screenJoinBadge: t(L, { ko: '현장 QR', en: 'Screen QR' }),
+    directJoinBadge: t(L, { ko: '직접 입력', en: 'Direct join' }),
     emptyH: t(L, { ko: '아직 아무도 참여하지 않았어요', en: "No one's joined yet" }),
     emptyP: t(L, { ko: 'QR이나 이 링크를 공유해서 프로필을 모아보세요.', en: 'Share the QR or this link to start collecting profiles.' }),
     emptyCta: t(L, { ko: '큰 화면 QR 열기 →', en: 'Open big-screen QR →' }),
     participants: t(L, { ko: '참여자', en: 'Participants' }),
+    pending: t(L, { ko: '승인 대기', en: 'Pending approval' }),
+    hidden: t(L, { ko: '숨긴 참가자', en: 'Hidden people' }),
+    approve: t(L, { ko: '승인', en: 'Approve' }),
+    hide: t(L, { ko: '숨기기', en: 'Hide' }),
+    movePending: t(L, { ko: '대기로', en: 'Move to pending' }),
+    pendingHint: t(L, { ko: '행사 이후 들어온 사람들을 확인해서 공개할 수 있어요.', en: 'Review people who joined after the auto-approve window.' }),
     footer: t(L, { ko: '이 페이지는 계속 살아있어요. 북마크해두세요.', en: 'This page persists. Bookmark it.' }),
     footerSub: t(L, { ko: '행사는 끝나도, 만남은 끝나지 않게.', en: "The meet doesn't end after the meet." }),
   };
@@ -53,7 +83,6 @@ export async function onRequestGet({ params, env, request }) {
   .ev-title { font-size: clamp(32px, 4.5vw, 56px); font-weight: 800; line-height: 1.05; letter-spacing: -0.035em; margin: 10px 0 12px; }
   .ev-desc { font-size: 16px; color: var(--text-muted); max-width: 720px; line-height: 1.55; margin-bottom: 18px; }
   .meta-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .toolbar { margin: 18px 0 8px; display:flex; flex-wrap:wrap; gap:10px; }
   .host-strip { margin: 18px 0 28px; display:grid; gap:14px; }
   .host-strip-top { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; flex-wrap:wrap; }
   .host-strip-actions { display:flex; flex-wrap:wrap; gap:10px; }
@@ -65,6 +94,14 @@ export async function onRequestGet({ params, env, request }) {
   .section-head h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
   .section-head .count { font-size: 14px; color: var(--text-muted); }
   .followup { margin: 0 0 22px; }
+  .subsection { margin-top: 28px; }
+  .moderation-grid { display:grid; gap:12px; }
+  .moderation-card { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; }
+  .moderation-meta { min-width:0; }
+  .moderation-meta strong { display:block; font-size:15px; }
+  .moderation-meta .tiny { margin-top:6px; }
+  .moderation-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+  .status-badges { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
   footer { padding: 60px 28px 40px; text-align: center; font-size: 13px; color: var(--text-dim); }
   .lang-switch { display: inline-flex; gap: 4px; font-size: 11px; }
   .lang-switch a { padding: 4px 8px; border-radius: 6px; text-decoration: none; color: var(--text-dim); }
@@ -78,11 +115,11 @@ export async function onRequestGet({ params, env, request }) {
   <a href="/" class="brand"><span class="brand-dot"></span>aftermeet</a>
   <div style="display:flex;gap:8px;align-items:center;">
     <span class="lang-switch">
-      <a href="?lang=ko" class="${L==='ko'?'on':''}">KO</a>
-      <a href="?lang=en" class="${L==='en'?'on':''}">EN</a>
+      <a href="?lang=ko${isHost ? `&host=${encodeURIComponent(hostToken)}` : ''}" class="${L==='ko'?'on':''}">KO</a>
+      <a href="?lang=en${isHost ? `&host=${encodeURIComponent(hostToken)}` : ''}" class="${L==='en'?'on':''}">EN</a>
     </span>
-    <a href="/e/${slug}/screen" class="btn btn-ghost btn-sm">${escapeHtml(S.screenBtn)}</a>
-    <a href="/e/${slug}/join" class="btn btn-primary btn-sm">${escapeHtml(S.joinBtn)}</a>
+    <a href="${escapeAttr(screenUrl)}" class="btn btn-ghost btn-sm">${escapeHtml(S.screenBtn)}</a>
+    <a href="${escapeAttr(joinUrl)}" class="btn btn-primary btn-sm">${escapeHtml(S.joinBtn)}</a>
   </div>
 </nav>
 
@@ -94,7 +131,8 @@ export async function onRequestGet({ params, env, request }) {
     <div class="meta-row">
       ${event.location ? `<span class="chip">📍 ${escapeHtml(event.location)}</span>` : ''}
       ${event.date ? `<span class="chip">📅 ${escapeHtml(formatDate(event.date, L))}</span>` : ''}
-      <span class="chip">👥 ${escapeHtml(S.people(participants.length))}</span>
+      <span class="chip">👥 ${escapeHtml(S.people(approved.length))}</span>
+      ${event.joinAutoApproveUntil ? `<span class="chip">⏳ ${escapeHtml(S.autoUntil)}: ${escapeHtml(formatDateTime(event.joinAutoApproveUntil, L))}</span>` : ''}
       <a href="${escapeAttr(event.sourceUrl)}" target="_blank" rel="noopener" class="chip" style="text-decoration:none;">${escapeHtml(S.original)}</a>
     </div>
   </header>
@@ -110,6 +148,7 @@ export async function onRequestGet({ params, env, request }) {
         <a href="${escapeAttr(joinUrl)}" class="btn btn-primary btn-sm">${escapeHtml(S.joinBtn)}</a>
         <button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(joinUrl)}">${escapeHtml(S.copyJoinBtn)}</button>
         <button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(eventUrl)}">${escapeHtml(S.copyEventBtn)}</button>
+        ${isHost ? `<button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(hostLink)}">${escapeHtml(S.copyHostBtn)}</button>` : ''}
       </div>
     </div>
   </section>
@@ -129,24 +168,47 @@ export async function onRequestGet({ params, env, request }) {
     </section>
   ` : ''}
 
-  ${participants.length === 0 ? `
+  ${approved.length === 0 ? `
     <div class="empty rise">
       <div style="font-size: 36px; margin-bottom: 8px;">📭</div>
       <h3>${escapeHtml(S.emptyH)}</h3>
       <p>${escapeHtml(S.emptyP)}</p>
-      <a href="/e/${slug}/screen" class="btn btn-primary">${escapeHtml(S.emptyCta)}</a>
+      <a href="${escapeAttr(screenUrl)}" class="btn btn-primary">${escapeHtml(S.emptyCta)}</a>
     </div>
   ` : `
     <section class="rise">
       <div class="section-head">
         <h2>${escapeHtml(S.participants)}</h2>
-        <div class="count">${escapeHtml(S.people(participants.length))}</div>
+        <div class="count">${escapeHtml(S.people(approved.length))}</div>
       </div>
       <div class="grid-people rise-stagger">
-        ${participants.map(renderCard).join('')}
+        ${approved.map((p) => renderCard(p, S, slug)).join('')}
       </div>
     </section>
   `}
+
+  ${isHost ? `
+    <section class="subsection rise">
+      <div class="section-head">
+        <h2>${escapeHtml(S.pending)}</h2>
+        <div class="count">${escapeHtml(S.people(pending.length))}</div>
+      </div>
+      <p class="tiny-note" style="margin-bottom:14px;">${escapeHtml(S.pendingHint)}</p>
+      <div class="moderation-grid">
+        ${pending.length ? pending.map((p) => renderModerationCard(p, slug, hostToken, S)).join('') : `<div class="card-flat tiny-note">—</div>`}
+      </div>
+    </section>
+
+    <section class="subsection rise">
+      <div class="section-head">
+        <h2>${escapeHtml(S.hidden)}</h2>
+        <div class="count">${escapeHtml(S.people(hidden.length))}</div>
+      </div>
+      <div class="moderation-grid">
+        ${hidden.length ? hidden.map((p) => renderModerationCard(p, slug, hostToken, S)).join('') : `<div class="card-flat tiny-note">—</div>`}
+      </div>
+    </section>
+  ` : ''}
 </main>
 
 <footer>
@@ -154,6 +216,7 @@ export async function onRequestGet({ params, env, request }) {
 </footer>
 
 <script>
+const hostToken = ${JSON.stringify(hostToken)};
 for (const el of document.querySelectorAll('[data-copy]')) {
   el.addEventListener('click', async () => {
     try {
@@ -164,20 +227,41 @@ for (const el of document.querySelectorAll('[data-copy]')) {
     } catch {}
   });
 }
+for (const el of document.querySelectorAll('[data-op]')) {
+  el.addEventListener('click', async () => {
+    const card = el.closest('[data-profile-id]');
+    if (!card) return;
+    const profileId = card.getAttribute('data-profile-id');
+    const op = el.getAttribute('data-op');
+    el.disabled = true;
+    try {
+      const r = await fetch('/api/events?action=membership', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: ${JSON.stringify(slug)}, profileId, op, hostToken })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed');
+      window.location.reload();
+    } catch (e) {
+      el.disabled = false;
+      alert(e.message || 'Failed');
+    }
+  });
+}
 </script>
 
 </body>
 </html>`;
 
   const headers = { 'Content-Type': 'text/html; charset=utf-8' };
-  const url = new URL(request.url);
-  if (url.searchParams.get('lang') === 'ko' || url.searchParams.get('lang') === 'en') {
-    headers['Set-Cookie'] = `aftermeet_lang=${url.searchParams.get('lang')}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  if (pageUrl.searchParams.get('lang') === 'ko' || pageUrl.searchParams.get('lang') === 'en') {
+    headers['Set-Cookie'] = `aftermeet_lang=${pageUrl.searchParams.get('lang')}; Path=/; Max-Age=31536000; SameSite=Lax`;
   }
   return new Response(html, { headers });
 }
 
-function renderCard(p) {
+function renderCard(p, S, slug) {
   const platformIcon = { linkedin: '𝐢𝐧', x: '𝕏', github: '◉', threads: '@', facebook: 'f', web: '🌐' }[p.platform] || '🔗';
   const platformLabel = { linkedin: 'LinkedIn', x: 'X', github: 'GitHub', threads: 'Threads', facebook: 'Facebook', web: 'Website' }[p.platform] || p.platform;
   const initial = ((p.name || '?')[0] || '?').toUpperCase();
@@ -191,9 +275,58 @@ function renderCard(p) {
       <div class="person-name">${escapeHtml(p.name || 'Anonymous')}</div>
       ${p.title ? `<div class="person-title">${escapeHtml(p.title)}</div>` : ''}
       ${p.note ? `<div class="person-note">${escapeHtml(p.note)}</div>` : ''}
+      <div class="status-badges">
+        <span class="chip">${escapeHtml(p.membership.joinState === 'approved' ? S.approvedBadge : p.membership.joinState)}</span>
+        <span class="chip">${escapeHtml(p.membership.joinSource === 'screen' ? S.screenJoinBadge : S.directJoinBadge)}</span>
+      </div>
       <div class="person-platform"><span>${platformIcon}</span><span>${escapeHtml(platformLabel)}</span></div>
     </a>
   `;
+}
+
+function renderModerationCard(p, slug, hostToken, S) {
+  return `
+    <div class="card-flat moderation-card" data-profile-id="${escapeAttr(p.id)}">
+      <div class="moderation-meta">
+        <strong>${escapeHtml(p.name || 'Anonymous')}</strong>
+        <div class="tiny-note">${escapeHtml(stripProtocol(p.url || ''))}</div>
+        <div class="status-badges">
+          <span class="chip">${escapeHtml(labelForState(p.membership.joinState, S))}</span>
+          <span class="chip">${escapeHtml(p.membership.joinSource === 'screen' ? S.screenJoinBadge : S.directJoinBadge)}</span>
+          ${p.membership.joinedAt ? `<span class="chip">${escapeHtml(formatDateTime(p.membership.joinedAt, 'en'))}</span>` : ''}
+        </div>
+      </div>
+      <div class="moderation-actions">
+        ${p.membership.joinState !== 'approved' ? `<button type="button" class="btn btn-primary btn-sm" data-op="approve">${escapeHtml(S.approve)}</button>` : ''}
+        ${p.membership.joinState !== 'pending' ? `<button type="button" class="btn btn-ghost btn-sm" data-op="pending">${escapeHtml(S.movePending)}</button>` : ''}
+        ${p.membership.joinState !== 'hidden' ? `<button type="button" class="btn btn-ghost btn-sm" data-op="hide">${escapeHtml(S.hide)}</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function getMembership(profile, slug) {
+  const membership = profile.memberships?.[slug];
+  if (membership) return membership;
+  return {
+    joinedAt: profile.createdAt || null,
+    updatedAt: profile.updatedAt || null,
+    joinState: Array.isArray(profile.events) && profile.events.includes(slug) ? 'approved' : 'pending',
+    joinSource: 'direct',
+  };
+}
+
+function sortProfiles(a, b) {
+  const ta = new Date(a.membership?.joinedAt || a.createdAt || 0).getTime();
+  const tb = new Date(b.membership?.joinedAt || b.createdAt || 0).getTime();
+  return tb - ta;
+}
+
+function labelForState(state, S) {
+  if (state === 'approved') return S.approvedBadge;
+  if (state === 'pending') return S.pendingBadge;
+  if (state === 'hidden') return S.hiddenBadge;
+  return state;
 }
 
 function truncate(s, n) {
@@ -206,6 +339,15 @@ function formatDate(s, locale) {
     const d = new Date(s);
     return d.toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US',
       { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return s; }
+}
+
+function formatDateTime(s, locale) {
+  try {
+    const d = new Date(s);
+    return d.toLocaleString(locale === 'ko' ? 'ko-KR' : 'en-US', {
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
   } catch { return s; }
 }
 

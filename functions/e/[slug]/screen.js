@@ -7,9 +7,12 @@ export async function onRequestGet({ params, env, request }) {
   if (!raw) return new Response('Event not found', { status: 404 });
   const event = JSON.parse(raw);
   const L = detectLocale(request);
+  const pageUrl = new URL(request.url);
+  const hostToken = pageUrl.searchParams.get('host') || '';
+  const isHost = Boolean(hostToken && event.hostToken && hostToken === event.hostToken);
 
-  const baseUrl = new URL(request.url).origin;
-  const joinUrl = `${baseUrl}/e/${slug}/join`;
+  const baseUrl = pageUrl.origin;
+  const joinUrl = `${baseUrl}/e/${slug}/join?source=screen${isHost ? `&host=${encodeURIComponent(hostToken)}` : ''}`;
   const count = (event.participantIds || []).length;
 
   const S = {
@@ -72,8 +75,8 @@ export async function onRequestGet({ params, env, request }) {
   </div>
 </div>
 
-<a href="/e/${slug}" class="footer-link left">${escapeHtml(S.hostBack)}</a>
-<a href="/e/${slug}" class="footer-link">${escapeHtml(S.seeAll)}</a>
+<a href="/e/${slug}${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}" class="footer-link left">${escapeHtml(S.hostBack)}</a>
+<a href="/e/${slug}${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}" class="footer-link">${escapeHtml(S.seeAll)}</a>
 
 <script>
 async function refresh() {
@@ -91,9 +94,8 @@ setInterval(refresh, 3000);
 </html>`;
 
   const headers = { 'Content-Type': 'text/html; charset=utf-8' };
-  const url = new URL(request.url);
-  if (url.searchParams.get('lang') === 'ko' || url.searchParams.get('lang') === 'en') {
-    headers['Set-Cookie'] = `aftermeet_lang=${url.searchParams.get('lang')}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  if (pageUrl.searchParams.get('lang') === 'ko' || pageUrl.searchParams.get('lang') === 'en') {
+    headers['Set-Cookie'] = `aftermeet_lang=${pageUrl.searchParams.get('lang')}; Path=/; Max-Age=31536000; SameSite=Lax`;
   }
   return new Response(html, { headers });
 }

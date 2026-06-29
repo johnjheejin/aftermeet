@@ -1,9 +1,18 @@
-// POST /api/events  { eventUrl, hostProfile?, followupUrl?, followupLabel? }
+// POST /api/events  { eventUrl, hostProfile?, followupUrl?, followupLabel?, joinAutoApproveUntil? }
 // GET  /api/events?slug=xxx
+// POST /api/events?action=membership  { slug, profileId, op, hostToken }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(ctx) {
+  const url = new URL(ctx.request.url);
+  if (url.searchParams.get('action') === 'membership') {
+    return handleMembershipUpdate(ctx);
+  }
+  return handleEventUpsert(ctx);
+}
+
+async function handleEventUpsert({ request, env }) {
   try {
-    const { eventUrl, hostProfile, followupUrl, followupLabel } = await request.json();
+    const { eventUrl, hostProfile, followupUrl, followupLabel, joinAutoApproveUntil } = await request.json();
     if (!eventUrl) return json({ error: 'eventUrl required' }, 400);
 
     const normalizedEventUrl = normalizeUrl(eventUrl);
@@ -17,6 +26,8 @@ export async function onRequestPost({ request, env }) {
       if (hostProfile) event.hostProfileUrl = normalizeOptionalUrl(hostProfile);
       if (followupUrl) event.followupUrl = normalizeOptionalUrl(followupUrl);
       if (followupLabel) event.followupLabel = String(followupLabel).trim();
+      if (joinAutoApproveUntil) event.joinAutoApproveUntil = normalizeJoinDeadline(joinAutoApproveUntil);
+      if (!event.hostToken) event.hostToken = generateHostToken();
       event.updatedAt = new Date().toISOString();
       await env.EVENTS.put(`event:${slug}`, JSON.stringify(event));
     } else {
@@ -32,6 +43,8 @@ export async function onRequestPost({ request, env }) {
         hostProfileUrl: normalizeOptionalUrl(hostProfile),
         followupUrl: normalizeOptionalUrl(followupUrl),
         followupLabel: cleanOptionalText(followupLabel),
+        joinAutoApproveUntil: normalizeJoinDeadline(joinAutoApproveUntil || defaultJoinDeadline(parsed.date)),
+        hostToken: generateHostToken(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         participantIds: [],
@@ -39,7 +52,38 @@ export async function onRequestPost({ request, env }) {
       await env.EVENTS.put(`event:${slug}`, JSON.stringify(event));
     }
 
-    return json({ slug, event });
+    return json({ slug, event, hostLink: `/e/${slug}?host=${encodeURIComponent(event.hostToken)}` });
+  } catch (e) {
+    return json({ error: e.message || 'Server error' }, 500);
+  }
+}
+
+async function handleMembershipUpdate({ request, env }) {
+  try {
+    const { slug, profileId, op, hostToken } = await request.json();
+    if (!slug || !profileId || !op || !hostToken) return json({ error: 'slug + profileId + op + hostToken required' }, 400);
+
+    const eventRaw = await env.EVENTS.get(`event:${slug}`);
+    if (!eventRaw) return json({ error: 'event not found' }, 404);
+    const event = JSON.parse(eventRaw);
+    if (!event.hostToken || event.hostToken !== hostToken) return json({ error: 'forbidden' }, 403);
+
+    const profileRaw = await env.PROFILES.get(`profile:${profileId}`);
+    if (!profileRaw) return json({ error: 'profile not found' }, 404);
+    const profile = JSON.parse(profileRaw);
+    const membership = ensureMembership(profile, slug);
+    const now = new Date().toISOString();
+
+    if (op === 'approve') membership.joinState = 'approved';
+    else if (op === 'hide') membership.joinState = 'hidden';
+    else if (op === 'pending') membership.joinState = 'pending';
+    else return json({ error: 'unsupported op' }, 400);
+
+    membership.updatedAt = now;
+    profile.updatedAt = now;
+    await env.PROFILES.put(`profile:${profileId}`, JSON.stringify(profile));
+
+    return json({ ok: true, profileId, joinState: membership.joinState });
   } catch (e) {
     return json({ error: e.message || 'Server error' }, 500);
   }
@@ -82,6 +126,20 @@ function normalizeOptionalUrl(url) {
 function cleanOptionalText(value) {
   const text = String(value || '').trim();
   return text || null;
+}
+
+function normalizeJoinDeadline(value) {
+  const iso = new Date(value).toISOString();
+  if (iso === 'Invalid Date') throw new Error('invalid joinAutoApproveUntil');
+  return iso;
+}
+
+function defaultJoinDeadline(eventDate) {
+  const base = eventDate ? new Date(eventDate) : new Date();
+  if (Number.isNaN(base.getTime())) return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const utc = new Date(base.getTime() + 9 * 60 * 60 * 1000);
+  utc.setUTCHours(23, 59, 59, 999);
+  return utc.toISOString();
 }
 
 function slugifyFromUrl(url) {
@@ -164,6 +222,23 @@ function extractMeta(html) {
   }
 
   return { title, description, image, date, location };
+}
+
+function generateHostToken() {
+  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+}
+
+function ensureMembership(profile, slug) {
+  if (!profile.memberships) profile.memberships = {};
+  if (!profile.memberships[slug]) {
+    profile.memberships[slug] = {
+      joinedAt: null,
+      updatedAt: null,
+      joinState: 'pending',
+      joinSource: 'direct',
+    };
+  }
+  return profile.memberships[slug];
 }
 
 function decodeHtml(s) {

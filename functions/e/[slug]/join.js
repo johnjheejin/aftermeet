@@ -7,6 +7,11 @@ export async function onRequestGet({ params, env, request }) {
   if (!raw) return new Response('Event not found', { status: 404 });
   const event = JSON.parse(raw);
   const L = detectLocale(request);
+  const pageUrl = new URL(request.url);
+  const hostToken = pageUrl.searchParams.get('host') || '';
+  const isHost = Boolean(hostToken && event.hostToken && hostToken === event.hostToken);
+  const joinSource = pageUrl.searchParams.get('source') === 'screen' ? 'screen' : 'direct';
+  const followupAllowed = event.followupUrl && Date.now() <= new Date(event.joinAutoApproveUntil || 0).getTime();
 
   const S = {
     title: t(L, { ko: `${event.title} 참여 · aftermeet`, en: `Join ${event.title} · aftermeet` }),
@@ -21,9 +26,12 @@ export async function onRequestGet({ params, env, request }) {
     connecting: t(L, { ko: '연결 중…', en: 'Connecting…' }),
     successH: t(L, { ko: '연결됐어요.', en: "You're in." }),
     successP: t(L, { ko: '다른 참여자들도 확인해보세요. 페이지를 북마크해두면 행사 후에도 다시 올 수 있어요.', en: 'See who else is here, and bookmark the page — it stays after the meet.' }),
+    pendingH: t(L, { ko: '제출됐어요. 승인 대기 중이에요.', en: 'Submitted. Waiting for host approval.' }),
+    pendingP: t(L, { ko: '행사 이후 참여라서 바로 공개되지는 않아요. 호스트가 확인하면 참가자 페이지에 나타납니다.', en: 'Because this join came in after the event window, it will appear once the host approves it.' }),
     alreadyH: t(L, { ko: '이미 참여되어 있어요.', en: 'You were already in.' }),
     alreadyP: t(L, { ko: '같은 프로필 링크로 다시 들어왔어요. 참여자 페이지에서 이어서 보시면 됩니다.', en: 'That profile link was already connected. Continue from the participant page.' }),
     successBtn: t(L, { ko: '참여자 보기 →', en: 'View participants →' }),
+    materialsBtn: t(L, { ko: event.followupLabel || '행사 자료 보기 ↗', en: event.followupLabel || 'View follow-up ↗' }),
   };
 
   const html = `<!DOCTYPE html>
@@ -51,7 +59,8 @@ export async function onRequestGet({ params, env, request }) {
   .success { text-align: center; padding: 40px 16px; }
   .success-emoji { font-size: 56px; margin-bottom: 16px; }
   .success h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
-  .success p { color: var(--text-muted); margin-bottom: 28px; }
+  .success p { color: var(--text-muted); margin-bottom: 18px; }
+  .success-actions { display:flex; flex-direction:column; gap:10px; }
   .lang-switch { display: inline-flex; gap: 4px; font-size: 11px; }
   .lang-switch a { padding: 4px 8px; border-radius: 6px; text-decoration: none; color: var(--text-dim); }
   .lang-switch a.on { background: var(--bg-elev); color: var(--accent-hi); }
@@ -62,8 +71,8 @@ export async function onRequestGet({ params, env, request }) {
 <nav class="nav">
   <a href="/" class="brand"><span class="brand-dot"></span>aftermeet</a>
   <span class="lang-switch">
-    <a href="?lang=ko" class="${L==='ko'?'on':''}">KO</a>
-    <a href="?lang=en" class="${L==='en'?'on':''}">EN</a>
+    <a href="?lang=ko${isHost ? `&host=${encodeURIComponent(hostToken)}` : ''}" class="${L==='ko'?'on':''}">KO</a>
+    <a href="?lang=en${isHost ? `&host=${encodeURIComponent(hostToken)}` : ''}" class="${L==='en'?'on':''}">EN</a>
   </span>
 </nav>
 
@@ -101,7 +110,10 @@ export async function onRequestGet({ params, env, request }) {
     <div class="success-emoji">🤝</div>
     <h2 id="successHeading">${escapeHtml(S.successH)}</h2>
     <p id="successBody">${escapeHtml(S.successP)}</p>
-    <a href="/e/${slug}" class="btn btn-primary">${escapeHtml(S.successBtn)}</a>
+    <div class="success-actions">
+      <a href="/e/${slug}${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}" class="btn btn-primary">${escapeHtml(S.successBtn)}</a>
+      ${followupAllowed ? `<a id="followupBtn" href="${escapeAttr(event.followupUrl)}" target="_blank" rel="noopener" class="btn btn-ghost">${escapeHtml(S.materialsBtn)}</a>` : ''}
+    </div>
   </div>
 </main>
 
@@ -116,6 +128,8 @@ const SUBMIT_LABEL = ${JSON.stringify(S.submit)};
 const CONNECTING_LABEL = ${JSON.stringify(S.connecting)};
 const SUCCESS_H = ${JSON.stringify(S.successH)};
 const SUCCESS_P = ${JSON.stringify(S.successP)};
+const PENDING_H = ${JSON.stringify(S.pendingH)};
+const PENDING_P = ${JSON.stringify(S.pendingP)};
 const ALREADY_H = ${JSON.stringify(S.alreadyH)};
 const ALREADY_P = ${JSON.stringify(S.alreadyP)};
 
@@ -137,6 +151,7 @@ form.addEventListener('submit', async (e) => {
         profileUrl,
         displayName: document.getElementById('displayName').value.trim(),
         note: document.getElementById('note').value.trim(),
+        joinSource: ${JSON.stringify(joinSource)}
       })
     });
     const data = await res.json();
@@ -144,6 +159,11 @@ form.addEventListener('submit', async (e) => {
     if (data.joinStatus === 'already_joined') {
       successHeadingEl.textContent = ALREADY_H;
       successBodyEl.textContent = ALREADY_P;
+    } else if (data.joinState === 'pending') {
+      successHeadingEl.textContent = PENDING_H;
+      successBodyEl.textContent = PENDING_P;
+      const followupBtn = document.getElementById('followupBtn');
+      if (followupBtn) followupBtn.remove();
     } else {
       successHeadingEl.textContent = SUCCESS_H;
       successBodyEl.textContent = SUCCESS_P;
@@ -161,9 +181,8 @@ form.addEventListener('submit', async (e) => {
 </html>`;
 
   const headers = { 'Content-Type': 'text/html; charset=utf-8' };
-  const url = new URL(request.url);
-  if (url.searchParams.get('lang') === 'ko' || url.searchParams.get('lang') === 'en') {
-    headers['Set-Cookie'] = `aftermeet_lang=${url.searchParams.get('lang')}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  if (pageUrl.searchParams.get('lang') === 'ko' || pageUrl.searchParams.get('lang') === 'en') {
+    headers['Set-Cookie'] = `aftermeet_lang=${pageUrl.searchParams.get('lang')}; Path=/; Max-Age=31536000; SameSite=Lax`;
   }
   return new Response(html, { headers });
 }

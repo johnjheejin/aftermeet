@@ -1,8 +1,8 @@
-// POST /api/profiles  { eventSlug, profileUrl, displayName?, note? }
+// POST /api/profiles  { eventSlug, profileUrl, displayName?, note?, joinSource? }
 
 export async function onRequestPost({ request, env }) {
   try {
-    const { eventSlug, profileUrl, displayName, note } = await request.json();
+    const { eventSlug, profileUrl, displayName, note, joinSource } = await request.json();
     if (!eventSlug || !profileUrl) return json({ error: 'eventSlug + profileUrl required' }, 400);
 
     const eventRaw = await env.EVENTS.get(`event:${eventSlug}`);
@@ -14,7 +14,8 @@ export async function onRequestPost({ request, env }) {
     const profileId = hashId(canonicalUrl);
 
     let profile = await findExistingProfile(env, event, rawUrl, canonicalUrl, profileId);
-    const joinStatus = event.participantIds.includes(profileId) ? 'already_joined' : 'joined';
+    const now = new Date().toISOString();
+    const autoApprove = isAutoApproveOpen(event, now);
 
     if (profile) {
       profile.id = profileId;
@@ -23,35 +24,61 @@ export async function onRequestPost({ request, env }) {
       if (displayName) profile.name = displayName;
       if (note) profile.note = note;
       if (!profile.platform) profile.platform = detectPlatform(canonicalUrl);
+      if (!Array.isArray(profile.events)) profile.events = [];
       if (!profile.events.includes(eventSlug)) profile.events.push(eventSlug);
-      profile.updatedAt = new Date().toISOString();
-    } else {
-      const parsed = await parseProfile(canonicalUrl);
-      profile = {
-        id: profileId,
-        url: rawUrl,
-        canonicalUrl,
-        name: displayName || parsed.name || extractHandle(canonicalUrl),
-        title: parsed.title || '',
-        bio: parsed.bio || '',
-        avatar: parsed.avatar || null,
-        platform: parsed.platform,
-        note: note || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        events: [eventSlug],
-      };
+      if (!profile.memberships) profile.memberships = {};
+
+      const membership = ensureMembership(profile, eventSlug);
+      const alreadyJoined = Boolean(membership.joinedAt);
+      if (!alreadyJoined) membership.joinedAt = now;
+      membership.joinState = alreadyJoined ? membership.joinState : (autoApprove ? 'approved' : 'pending');
+      membership.joinSource = normalizeJoinSource(joinSource);
+      membership.updatedAt = now;
+      profile.updatedAt = now;
+
+      await env.PROFILES.put(`profile:${profileId}`, JSON.stringify(profile));
+      if (!event.participantIds.includes(profileId)) {
+        event.participantIds.push(profileId);
+        event.updatedAt = now;
+        await env.EVENTS.put(`event:${eventSlug}`, JSON.stringify(event));
+      }
+
+      return json({ profile, eventSlug, joinStatus: alreadyJoined ? 'already_joined' : 'joined', joinState: membership.joinState });
     }
+
+    const parsed = await parseProfile(canonicalUrl);
+    profile = {
+      id: profileId,
+      url: rawUrl,
+      canonicalUrl,
+      name: displayName || parsed.name || extractHandle(canonicalUrl),
+      title: parsed.title || '',
+      bio: parsed.bio || '',
+      avatar: parsed.avatar || null,
+      platform: parsed.platform,
+      note: note || '',
+      createdAt: now,
+      updatedAt: now,
+      events: [eventSlug],
+      memberships: {
+        [eventSlug]: {
+          joinedAt: now,
+          updatedAt: now,
+          joinState: autoApprove ? 'approved' : 'pending',
+          joinSource: normalizeJoinSource(joinSource),
+        }
+      },
+    };
 
     await env.PROFILES.put(`profile:${profileId}`, JSON.stringify(profile));
 
     if (!event.participantIds.includes(profileId)) {
       event.participantIds.push(profileId);
-      event.updatedAt = new Date().toISOString();
+      event.updatedAt = now;
       await env.EVENTS.put(`event:${eventSlug}`, JSON.stringify(event));
     }
 
-    return json({ profile, eventSlug, joinStatus });
+    return json({ profile, eventSlug, joinStatus: 'joined', joinState: profile.memberships[eventSlug].joinState });
   } catch (e) {
     return json({ error: e.message || 'Server error' }, 500);
   }
@@ -143,6 +170,29 @@ function detectPlatform(url) {
     if (host.includes('facebook') || host === 'fb.com') return 'facebook';
   } catch {}
   return 'web';
+}
+
+function normalizeJoinSource(joinSource) {
+  return joinSource === 'screen' ? 'screen' : 'direct';
+}
+
+function isAutoApproveOpen(event, nowIso) {
+  if (!event.joinAutoApproveUntil) return true;
+  return new Date(nowIso).getTime() <= new Date(event.joinAutoApproveUntil).getTime();
+}
+
+function ensureMembership(profile, eventSlug) {
+  if (!profile.memberships) profile.memberships = {};
+  if (!profile.memberships[eventSlug]) {
+    const fallbackApproved = Array.isArray(profile.events) && profile.events.includes(eventSlug);
+    profile.memberships[eventSlug] = {
+      joinedAt: null,
+      updatedAt: null,
+      joinState: fallbackApproved ? 'approved' : 'pending',
+      joinSource: 'direct',
+    };
+  }
+  return profile.memberships[eventSlug];
 }
 
 async function parseProfile(url) {

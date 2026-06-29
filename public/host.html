@@ -68,6 +68,12 @@
              placeholder="행사 자료 보기" />
     </div>
 
+    <div>
+      <label class="label" for="joinAutoApproveUntil" data-i18n="deadlineLabel">Auto-approve until (optional)</label>
+      <input id="joinAutoApproveUntil" class="input" type="datetime-local" />
+      <p class="hint" data-i18n="deadlineHint">During this window, joins are approved immediately. After that, they wait for host approval.</p>
+    </div>
+
     <button id="submitBtn" type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" data-i18n="submit">
       Create event page →
     </button>
@@ -101,6 +107,8 @@ const I18N = {
     followupHint: '행사 자료, 카페 글, 노트, 사진 등 행사 후 다시 볼 링크 하나를 걸어두세요.',
     followupLabel: '후속 버튼 문구 (선택)',
     followupLabelPh: '행사 자료 보기',
+    deadlineLabel: '자동 승인 마감 시각 (선택)',
+    deadlineHint: '이 시간까지는 바로 승인되고, 이후부터는 호스트 승인 대기로 들어갑니다.',
     submit: '행사 페이지 만들기 →',
     parsing: '행사 정보를 가져오는 중…',
     recentEyebrow: '다시 들어가기',
@@ -109,6 +117,7 @@ const I18N = {
     recentEmpty: '아직 저장된 행사가 없어요. 하나 만들면 여기에 나타나요.',
     openEvent: '행사 페이지',
     openScreen: '스크린',
+    manage: '관리 링크',
   },
   en: {
     title: 'Host an event · aftermeet',
@@ -125,6 +134,8 @@ const I18N = {
     followupHint: 'Slides, cafe post, notes, photos — one useful link for after the event.',
     followupLabel: 'Follow-up button label (optional)',
     followupLabelPh: 'View event materials',
+    deadlineLabel: 'Auto-approve until (optional)',
+    deadlineHint: 'During this window, joins are approved immediately. After that, they wait for host approval.',
     submit: 'Create event page →',
     parsing: 'Parsing event…',
     recentEyebrow: 'RETURN TO YOUR EVENTS',
@@ -133,6 +144,7 @@ const I18N = {
     recentEmpty: 'No saved events yet. Create one and it will show up here.',
     openEvent: 'Event page',
     openScreen: 'Screen',
+    manage: 'Manage link',
   },
 };
 applyI18n(I18N);
@@ -150,6 +162,7 @@ form.addEventListener('submit', async (e) => {
   const hostProfile = document.getElementById('hostProfile').value.trim();
   const followupUrl = document.getElementById('followupUrl').value.trim();
   const followupLabel = document.getElementById('followupLabel').value.trim();
+  const joinAutoApproveUntil = document.getElementById('joinAutoApproveUntil').value;
   if (eventUrl && !/^https?:\/\//i.test(eventUrl)) eventUrl = 'https://' + eventUrl;
 
   btn.disabled = true;
@@ -160,12 +173,17 @@ form.addEventListener('submit', async (e) => {
     const res = await fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventUrl, hostProfile, followupUrl, followupLabel })
+      body: JSON.stringify({ eventUrl, hostProfile, followupUrl, followupLabel, joinAutoApproveUntil: joinAutoApproveUntil ? new Date(joinAutoApproveUntil).toISOString() : null })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
-    saveRecentEvent(data.event || { slug: data.slug, sourceUrl: eventUrl });
-    window.location.href = `/e/${data.slug}`;
+    saveRecentEvent({
+      slug: data.slug,
+      title: data.event?.title || data.slug,
+      sourceUrl: data.event?.sourceUrl || eventUrl,
+      hostLink: data.hostLink || `/e/${data.slug}`,
+    });
+    window.location.href = data.hostLink || `/e/${data.slug}`;
   } catch (err) {
     statusEl.innerHTML = '<span class="err">' + err.message + '</span>';
     btn.disabled = false;
@@ -175,6 +193,7 @@ form.addEventListener('submit', async (e) => {
 
 renderRecentEvents();
 prefillTargetEvent();
+prefillDeadline();
 
 function saveRecentEvent(event) {
   const items = loadRecentEvents().filter((item) => item.slug !== event.slug);
@@ -182,6 +201,7 @@ function saveRecentEvent(event) {
     slug: event.slug,
     title: event.title || event.slug,
     sourceUrl: event.sourceUrl || '',
+    hostLink: event.hostLink || `/e/${event.slug}`,
     updatedAt: new Date().toISOString(),
   });
   localStorage.setItem(RECENT_KEY, JSON.stringify(items.slice(0, 6)));
@@ -208,6 +228,7 @@ function renderRecentEvents() {
         <span>${escapeHtml(item.sourceUrl || ('/e/' + item.slug))}</span>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        <a class="btn btn-ghost btn-sm" href="${escapeAttr(item.hostLink || ('/e/' + item.slug))}">${escapeHtml(I18N[locale].manage)}</a>
         <a class="btn btn-ghost btn-sm" href="/e/${encodeURIComponent(item.slug)}">${escapeHtml(I18N[locale].openEvent)}</a>
         <a class="btn btn-primary btn-sm" href="/e/${encodeURIComponent(item.slug)}/screen">${escapeHtml(I18N[locale].openScreen)}</a>
       </div>
@@ -220,9 +241,23 @@ function prefillTargetEvent() {
   if (!input.value) input.value = 'https://luma.com/qo52rtw5';
 }
 
+function prefillDeadline() {
+  const input = document.getElementById('joinAutoApproveUntil');
+  if (input.value) return;
+  const d = new Date();
+  d.setHours(23, 59, 0, 0);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  input.value = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
 function escapeHtml(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+function escapeAttr(s) { return escapeHtml(s); }
 </script>
 </body>
 </html>
