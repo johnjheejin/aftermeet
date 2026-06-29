@@ -6,16 +6,19 @@ export async function onRequestGet({ params, env, request }) {
   const raw = await env.EVENTS.get(`event:${slug}`);
   if (!raw) return new Response('Event not found', { status: 404 });
   const event = JSON.parse(raw);
+  if ((event.status || 'active') === 'hidden') return new Response('Event not found', { status: 404 });
+  const archived = (event.status || 'active') === 'archived';
   const L = detectLocale(request);
   const pageUrl = new URL(request.url);
   const hostToken = pageUrl.searchParams.get('host') || '';
   const isHost = Boolean(hostToken && event.hostToken && hostToken === event.hostToken);
   const joinSource = pageUrl.searchParams.get('source') === 'screen' ? 'screen' : 'direct';
-  const followupAllowed = event.followupUrl && Date.now() <= new Date(event.joinAutoApproveUntil || 0).getTime();
+  const followupAllowed = !archived && event.followupUrl && Date.now() <= new Date(event.joinAutoApproveUntil || 0).getTime();
 
   const S = {
     title: t(L, { ko: `${event.title} 참여 · aftermeet`, en: `Join ${event.title} · aftermeet` }),
     youJoining: t(L, { ko: '참여 중인 행사', en: "YOU'RE JOINING" }),
+    archived: t(L, { ko: '이 이벤트는 보관 상태라 새 참여가 닫혀 있어요.', en: 'This event is archived, so new joins are closed.' }),
     profileLabel: t(L, { ko: '본인 프로필 링크', en: 'Your profile link' }),
     profilePh: t(L, { ko: 'linkedin.com/in/you · x.com/you · github.com/you', en: 'linkedin.com/in/you · x.com/you · github.com/you' }),
     profileHint: t(L, { ko: 'LinkedIn, X, GitHub, Facebook, 또는 본인 사이트. 나머지는 자동으로 채워드려요.', en: 'LinkedIn, X, GitHub, Facebook, or your personal site. We auto-fill the rest.' }),
@@ -83,6 +86,7 @@ export async function onRequestGet({ params, env, request }) {
     ${event.location ? `<p class="meta">📍 ${escapeHtml(event.location)}</p>` : ''}
   </div>
 
+  ${archived ? `<div class="card-flat" style="margin-bottom:18px;">${escapeHtml(S.archived)}</div>` : `
   <form id="joinForm" class="form-stack">
     <div>
       <label class="label" for="profileUrl">${escapeHtml(S.profileLabel)}</label>
@@ -104,7 +108,7 @@ export async function onRequestGet({ params, env, request }) {
     </button>
   </form>
 
-  <div id="status"></div>
+  <div id="status"></div>`}
 
   <div id="success" class="success rise" style="display:none;">
     <div class="success-emoji">🤝</div>
@@ -117,7 +121,7 @@ export async function onRequestGet({ params, env, request }) {
   </div>
 </main>
 
-<script>
+${archived ? '' : `<script>
 const form = document.getElementById('joinForm');
 const btn = document.getElementById('submitBtn');
 const statusEl = document.getElementById('status');
@@ -176,7 +180,7 @@ form.addEventListener('submit', async (e) => {
     btn.textContent = SUBMIT_LABEL;
   }
 });
-</script>
+</script>`}
 </body>
 </html>`;
 

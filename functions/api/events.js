@@ -37,6 +37,8 @@ async function handleEventUpsert({ request, env }) {
       if (followupLabel) event.followupLabel = String(followupLabel).trim();
       if (joinAutoApproveUntil) event.joinAutoApproveUntil = normalizeJoinDeadline(joinAutoApproveUntil);
       if (!event.hostToken) event.hostToken = generateHostToken();
+      if (!event.status) event.status = 'active';
+      if (!event.sourceHost) event.sourceHost = new URL(normalizedEventUrl).hostname.toLowerCase();
       event.updatedAt = new Date().toISOString();
       await env.EVENTS.put(`event:${slug}`, JSON.stringify(event));
     } else {
@@ -47,6 +49,7 @@ async function handleEventUpsert({ request, env }) {
         date: parsed.date,
         location: parsed.location,
         source: parsed.source,
+        sourceHost: new URL(normalizedEventUrl).hostname.toLowerCase(),
         sourceUrl: normalizedEventUrl,
         image: parsed.image,
         hostProfileUrl: normalizeOptionalUrl(hostProfile),
@@ -54,6 +57,7 @@ async function handleEventUpsert({ request, env }) {
         followupLabel: cleanOptionalText(followupLabel),
         joinAutoApproveUntil: normalizeJoinDeadline(joinAutoApproveUntil || defaultJoinDeadline(parsed.date)),
         hostToken: generateHostToken(),
+        status: 'active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         participantIds: [],

@@ -10,6 +10,11 @@ export async function onRequestGet({ params, env, request }) {
   const pageUrl = new URL(request.url);
   const hostToken = pageUrl.searchParams.get('host') || '';
   const isHost = Boolean(hostToken && event.hostToken && hostToken === event.hostToken);
+
+  const status = event.status || 'active';
+  if (status === 'hidden' && !isHost) return new Response('Event not found', { status: 404 });
+
+  const archived = status === 'archived';
   const baseUrl = pageUrl.origin;
   const eventUrl = `${baseUrl}/e/${slug}`;
   const hostLink = isHost ? `${eventUrl}?host=${encodeURIComponent(hostToken)}` : eventUrl;
@@ -52,6 +57,7 @@ export async function onRequestGet({ params, env, request }) {
     approvedBadge: t(L, { ko: '공개됨', en: 'Approved' }),
     pendingBadge: t(L, { ko: '승인 대기', en: 'Pending' }),
     hiddenBadge: t(L, { ko: '숨김', en: 'Hidden' }),
+    archivedBadge: t(L, { ko: '보관됨', en: 'Archived' }),
     screenJoinBadge: t(L, { ko: '현장 QR', en: 'Screen QR' }),
     directJoinBadge: t(L, { ko: '직접 입력', en: 'Direct join' }),
     emptyH: t(L, { ko: '아직 아무도 참여하지 않았어요', en: "No one's joined yet" }),
@@ -64,6 +70,7 @@ export async function onRequestGet({ params, env, request }) {
     hide: t(L, { ko: '숨기기', en: 'Hide' }),
     movePending: t(L, { ko: '대기로', en: 'Move to pending' }),
     pendingHint: t(L, { ko: '행사 이후 들어온 사람들을 확인해서 공개할 수 있어요.', en: 'Review people who joined after the auto-approve window.' }),
+    archivedNotice: t(L, { ko: '이 이벤트는 보관 상태입니다. 새 참여는 닫혀 있어요.', en: 'This event is archived. New joins are closed.' }),
     footer: t(L, { ko: '이 페이지는 계속 살아있어요. 북마크해두세요.', en: 'This page persists. Bookmark it.' }),
     footerSub: t(L, { ko: '행사는 끝나도, 만남은 끝나지 않게.', en: "The meet doesn't end after the meet." }),
   };
@@ -119,7 +126,7 @@ export async function onRequestGet({ params, env, request }) {
       <a href="?lang=en${isHost ? `&host=${encodeURIComponent(hostToken)}` : ''}" class="${L==='en'?'on':''}">EN</a>
     </span>
     <a href="${escapeAttr(screenUrl)}" class="btn btn-ghost btn-sm">${escapeHtml(S.screenBtn)}</a>
-    <a href="${escapeAttr(joinUrl)}" class="btn btn-primary btn-sm">${escapeHtml(S.joinBtn)}</a>
+    ${archived ? '' : `<a href="${escapeAttr(joinUrl)}" class="btn btn-primary btn-sm">${escapeHtml(S.joinBtn)}</a>`}
   </div>
 </nav>
 
@@ -133,9 +140,12 @@ export async function onRequestGet({ params, env, request }) {
       ${event.date ? `<span class="chip">📅 ${escapeHtml(formatDate(event.date, L))}</span>` : ''}
       <span class="chip">👥 ${escapeHtml(S.people(approved.length))}</span>
       ${event.joinAutoApproveUntil ? `<span class="chip">⏳ ${escapeHtml(S.autoUntil)}: ${escapeHtml(formatDateTime(event.joinAutoApproveUntil, L))}</span>` : ''}
+      ${status !== 'active' ? `<span class="chip">${escapeHtml(status === 'archived' ? S.archivedBadge : S.hiddenBadge)}</span>` : ''}
       <a href="${escapeAttr(event.sourceUrl)}" target="_blank" rel="noopener" class="chip" style="text-decoration:none;">${escapeHtml(S.original)}</a>
     </div>
   </header>
+
+  ${archived ? `<section class="card-flat rise" style="margin-bottom:22px;">${escapeHtml(S.archivedNotice)}</section>` : ''}
 
   <section class="card-flat host-strip rise">
     <div class="host-strip-top">
@@ -145,8 +155,8 @@ export async function onRequestGet({ params, env, request }) {
       </div>
       <div class="host-strip-actions">
         <a href="${escapeAttr(screenUrl)}" class="btn btn-ghost btn-sm">${escapeHtml(S.screenBtn)}</a>
-        <a href="${escapeAttr(joinUrl)}" class="btn btn-primary btn-sm">${escapeHtml(S.joinBtn)}</a>
-        <button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(joinUrl)}">${escapeHtml(S.copyJoinBtn)}</button>
+        ${archived ? '' : `<a href="${escapeAttr(joinUrl)}" class="btn btn-primary btn-sm">${escapeHtml(S.joinBtn)}</a>`}
+        ${archived ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(joinUrl)}">${escapeHtml(S.copyJoinBtn)}</button>`}
         <button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(eventUrl)}">${escapeHtml(S.copyEventBtn)}</button>
         ${isHost ? `<button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(hostLink)}">${escapeHtml(S.copyHostBtn)}</button>` : ''}
       </div>
@@ -182,7 +192,7 @@ export async function onRequestGet({ params, env, request }) {
         <div class="count">${escapeHtml(S.people(approved.length))}</div>
       </div>
       <div class="grid-people rise-stagger">
-        ${approved.map((p) => renderCard(p, S, slug)).join('')}
+        ${approved.map((p) => renderCard(p, S)).join('')}
       </div>
     </section>
   `}
@@ -261,7 +271,7 @@ for (const el of document.querySelectorAll('[data-op]')) {
   return new Response(html, { headers });
 }
 
-function renderCard(p, S, slug) {
+function renderCard(p, S) {
   const platformIcon = { linkedin: '𝐢𝐧', x: '𝕏', github: '◉', threads: '@', facebook: 'f', web: '🌐' }[p.platform] || '🔗';
   const platformLabel = { linkedin: 'LinkedIn', x: 'X', github: 'GitHub', threads: 'Threads', facebook: 'Facebook', web: 'Website' }[p.platform] || p.platform;
   const initial = ((p.name || '?')[0] || '?').toUpperCase();
@@ -276,7 +286,7 @@ function renderCard(p, S, slug) {
       ${p.title ? `<div class="person-title">${escapeHtml(p.title)}</div>` : ''}
       ${p.note ? `<div class="person-note">${escapeHtml(p.note)}</div>` : ''}
       <div class="status-badges">
-        <span class="chip">${escapeHtml(p.membership.joinState === 'approved' ? S.approvedBadge : p.membership.joinState)}</span>
+        <span class="chip">${escapeHtml(labelForState(p.membership.joinState, S))}</span>
         <span class="chip">${escapeHtml(p.membership.joinSource === 'screen' ? S.screenJoinBadge : S.directJoinBadge)}</span>
       </div>
       <div class="person-platform"><span>${platformIcon}</span><span>${escapeHtml(platformLabel)}</span></div>
@@ -326,6 +336,7 @@ function labelForState(state, S) {
   if (state === 'approved') return S.approvedBadge;
   if (state === 'pending') return S.pendingBadge;
   if (state === 'hidden') return S.hiddenBadge;
+  if (state === 'archived') return S.archivedBadge;
   return state;
 }
 
