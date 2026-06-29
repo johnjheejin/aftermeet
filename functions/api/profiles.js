@@ -154,10 +154,27 @@ function extractHandle(url) {
     const u = new URL(url);
     if (u.pathname === '/profile.php' && u.searchParams.get('id')) return `facebook:${u.searchParams.get('id')}`;
     const parts = u.pathname.split('/').filter(Boolean);
-    return parts[parts.length - 1] || u.hostname;
+    const handle = parts[parts.length - 1] || u.hostname;
+    return prettifyHandle(handle);
   } catch {
     return url;
   }
+}
+
+function prettifyHandle(value) {
+  const raw = String(value || '').replace(/^@/, '').trim();
+  if (!raw) return raw;
+  const spaced = raw
+    .replace(/[._-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/(\D)(\d)/g, '$1 $2')
+    .replace(/(\d)(\D)/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return spaced
+    .split(' ')
+    .map((part) => part ? part[0].toUpperCase() + part.slice(1) : part)
+    .join(' ');
 }
 
 function detectPlatform(url) {

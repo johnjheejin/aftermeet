@@ -21,9 +21,10 @@ export async function onRequestGet({ params, env, request }) {
     archived: t(L, { ko: '이 이벤트는 보관 상태라 새 참여가 닫혀 있어요.', en: 'This event is archived, so new joins are closed.' }),
     profileLabel: t(L, { ko: '본인 프로필 링크', en: 'Your profile link' }),
     profilePh: t(L, { ko: 'linkedin.com/in/you · x.com/you · github.com/you', en: 'linkedin.com/in/you · x.com/you · github.com/you' }),
-    profileHint: t(L, { ko: 'LinkedIn, X, GitHub, Facebook, 또는 본인 사이트. 나머지는 자동으로 채워드려요.', en: 'LinkedIn, X, GitHub, Facebook, or your personal site. We auto-fill the rest.' }),
-    detailsSummary: t(L, { ko: '이름이나 한 줄 소개 추가하기', en: 'Add a custom name or one-liner' }),
-    namePh: t(L, { ko: '표시할 이름 (선택)', en: 'Display name (optional)' }),
+    profileHint: t(L, { ko: 'LinkedIn, X, GitHub, Facebook, 또는 본인 사이트. LinkedIn은 자동 파싱이 불안정할 수 있으니 이름을 한번 확인해 주세요.', en: 'LinkedIn, X, GitHub, Facebook, or your personal site. LinkedIn auto-parsing can be flaky, so please confirm your name.' }),
+    nameLabel: t(L, { ko: '표시 이름', en: 'Display name' }),
+    noteLabel: t(L, { ko: '한 줄 소개', en: 'One-line intro' }),
+    namePh: t(L, { ko: '예: John J Heejin', en: 'e.g. John J Heejin' }),
     notePh: t(L, { ko: '요즘 뭐 하고 계세요? (한 줄)', en: "What are you working on? (one line)" }),
     submit: t(L, { ko: '연결하기 →', en: 'Join the meet →' }),
     connecting: t(L, { ko: '연결 중…', en: 'Connecting…' }),
@@ -95,13 +96,15 @@ export async function onRequestGet({ params, env, request }) {
       <p class="hint">${escapeHtml(S.profileHint)}</p>
     </div>
 
-    <details>
-      <summary>${escapeHtml(S.detailsSummary)}</summary>
-      <div>
-        <input id="displayName" class="input" type="text" placeholder="${escapeAttr(S.namePh)}" />
-        <input id="note" class="input" type="text" placeholder="${escapeAttr(S.notePh)}" />
-      </div>
-    </details>
+    <div>
+      <label class="label" for="displayName">${escapeHtml(S.nameLabel)}</label>
+      <input id="displayName" class="input" type="text" placeholder="${escapeAttr(S.namePh)}" />
+    </div>
+
+    <div>
+      <label class="label" for="note">${escapeHtml(S.noteLabel)}</label>
+      <input id="note" class="input" type="text" placeholder="${escapeAttr(S.notePh)}" />
+    </div>
 
     <button id="submitBtn" type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
       ${escapeHtml(S.submit)}
@@ -137,9 +140,18 @@ const PENDING_P = ${JSON.stringify(S.pendingP)};
 const ALREADY_H = ${JSON.stringify(S.alreadyH)};
 const ALREADY_P = ${JSON.stringify(S.alreadyP)};
 
+const profileUrlEl = document.getElementById('profileUrl');
+const displayNameEl = document.getElementById('displayName');
+
+profileUrlEl.addEventListener('blur', () => {
+  if (displayNameEl.value.trim()) return;
+  const guessed = guessNameFromProfileUrl(profileUrlEl.value);
+  if (guessed) displayNameEl.value = guessed;
+});
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  let profileUrl = document.getElementById('profileUrl').value.trim();
+  let profileUrl = profileUrlEl.value.trim();
   if (profileUrl && !/^https?:\/\//i.test(profileUrl)) profileUrl = 'https://' + profileUrl;
 
   btn.disabled = true;
@@ -153,7 +165,7 @@ form.addEventListener('submit', async (e) => {
       body: JSON.stringify({
         eventSlug: '${slug}',
         profileUrl,
-        displayName: document.getElementById('displayName').value.trim(),
+        displayName: displayNameEl.value.trim(),
         note: document.getElementById('note').value.trim(),
         joinSource: ${JSON.stringify(joinSource)}
       })
@@ -180,6 +192,27 @@ form.addEventListener('submit', async (e) => {
     btn.textContent = SUBMIT_LABEL;
   }
 });
+
+function guessNameFromProfileUrl(value) {
+  try {
+    const normalized = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+    const u = new URL(normalized);
+    const parts = u.pathname.split('/').filter(Boolean);
+    const raw = parts[parts.length - 1] || '';
+    if (!raw) return '';
+    const spaced = raw
+      .replace(/^@/, '')
+      .replace(/[._-]+/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/(\D)(\d)/g, '$1 $2')
+      .replace(/(\d)(\D)/g, '$1 $2')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return spaced.split(' ').map((part) => part ? part[0].toUpperCase() + part.slice(1) : part).join(' ');
+  } catch {
+    return '';
+  }
+}
 </script>`}
 </body>
 </html>`;
