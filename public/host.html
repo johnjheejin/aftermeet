@@ -20,6 +20,13 @@
   .recent-item .meta strong { display:block; font-size:15px; }
   .recent-item .meta span { display:block; margin-top:4px; font-size:12px; color: var(--text-dim); word-break: break-all; }
   .recent-empty { color: var(--text-dim); font-size: 13px; }
+  dialog#hostSheet { border:none; border-radius:24px; padding:0; max-width:520px; width:min(92vw,520px); background: var(--bg-elev); color: var(--text); box-shadow: 0 24px 100px rgba(0,0,0,0.4); }
+  dialog#hostSheet::backdrop { background: rgba(0,0,0,0.6); }
+  .host-sheet-body { padding: 24px; display:grid; gap:18px; }
+  .host-qr-wrap { display:flex; justify-content:center; }
+  .host-qr-card { background:white; padding:20px; border-radius:20px; }
+  .host-sheet-actions { display:flex; gap:10px; flex-wrap:wrap; }
+  .host-link-box { font-size:12px; color: var(--text-dim); word-break: break-all; }
 </style>
 </head>
 <body>
@@ -43,7 +50,7 @@
       <input id="eventUrl" class="input" type="url" required
              data-i18n-placeholder="urlPh"
              placeholder="https://luma.com/qo52rtw5" />
-      <p class="hint" data-i18n="urlHint">Cerebral Valley · Luma · most public event pages</p>
+      <p class="hint" data-i18n="urlHint">Luma · Cerebral Valley · LinkedIn events</p>
     </div>
 
     <div>
@@ -89,6 +96,27 @@
   </section>
 </main>
 
+<dialog id="hostSheet">
+  <div class="host-sheet-body">
+    <div>
+      <div class="eyebrow" id="hostSheetEyebrow">HOST ACCESS</div>
+      <h2 id="hostSheetTitle" style="margin:8px 0 6px; font-size:24px; letter-spacing:-0.02em;">Save this host link</h2>
+      <p class="muted" id="hostSheetDesc">Anyone with this link can approve, hide, and manage attendees. Keep it private.</p>
+    </div>
+    <div class="host-qr-wrap">
+      <div class="host-qr-card">
+        <img id="hostQrImage" alt="Host QR" width="280" height="280" />
+      </div>
+    </div>
+    <div id="hostLinkBox" class="host-link-box"></div>
+    <div class="host-sheet-actions">
+      <button type="button" class="btn btn-primary" id="copyHostLinkBtn">Copy host link</button>
+      <a class="btn btn-ghost" id="downloadHostQrBtn" download="aftermeet-host-link.png">Save QR</a>
+      <button type="button" class="btn btn-ghost" id="openHostLinkBtn">Open host page</button>
+    </div>
+  </div>
+</dialog>
+
 <script src="/i18n.js"></script>
 <script>
 const I18N = {
@@ -99,7 +127,7 @@ const I18N = {
     lede: '행사 URL을 붙여넣으세요. 페이지에서 제목, 이미지, 시간, 장소를 자동으로 가져옵니다.',
     urlLabel: '행사 URL',
     urlPh: 'https://luma.com/qo52rtw5',
-    urlHint: 'Cerebral Valley · Luma · 대부분의 공개 행사 페이지',
+    urlHint: 'Luma · Cerebral Valley · LinkedIn 이벤트',
     profileLabel: '본인 프로필 링크 (선택)',
     profilePh: 'linkedin.com/in/you · x.com/you · 본인 사이트',
     followupUrlLabel: '후속 링크 (선택)',
@@ -118,6 +146,12 @@ const I18N = {
     openEvent: '행사 페이지',
     openScreen: '스크린',
     manage: '관리 링크',
+    hostSheetEyebrow: '호스트 전용',
+    hostSheetTitle: '이 관리 링크를 저장해두세요',
+    hostSheetDesc: '이 링크를 가진 사람은 승인, 숨기기, 관리가 가능합니다. 외부에 공유하지 마세요.',
+    copyHostLink: '관리 링크 복사',
+    saveQr: 'QR 저장',
+    openHostLink: '호스트 페이지 열기',
   },
   en: {
     title: 'Host an event · aftermeet',
@@ -126,7 +160,7 @@ const I18N = {
     lede: 'Paste your event URL. We pull the title, image, time, and location from the page.',
     urlLabel: 'Event URL',
     urlPh: 'https://luma.com/qo52rtw5',
-    urlHint: 'Cerebral Valley · Luma · most public event pages',
+    urlHint: 'Luma · Cerebral Valley · LinkedIn events',
     profileLabel: 'Your profile link (optional)',
     profilePh: 'linkedin.com/in/you · x.com/you · your-site.com',
     followupUrlLabel: 'Follow-up link (optional)',
@@ -145,6 +179,12 @@ const I18N = {
     openEvent: 'Event page',
     openScreen: 'Screen',
     manage: 'Manage link',
+    hostSheetEyebrow: 'HOST ACCESS',
+    hostSheetTitle: 'Save this host link',
+    hostSheetDesc: 'Anyone with this link can approve, hide, and manage attendees. Keep it private.',
+    copyHostLink: 'Copy host link',
+    saveQr: 'Save QR',
+    openHostLink: 'Open host page',
   },
 };
 applyI18n(I18N);
@@ -155,13 +195,23 @@ const statusEl = document.getElementById('status');
 const recentList = document.getElementById('recentList');
 const locale = detectLocale();
 const RECENT_KEY = 'aftermeet_recent_events';
+const hostSheet = document.getElementById('hostSheet');
+const hostQrImage = document.getElementById('hostQrImage');
+const hostLinkBox = document.getElementById('hostLinkBox');
+const copyHostLinkBtn = document.getElementById('copyHostLinkBtn');
+const downloadHostQrBtn = document.getElementById('downloadHostQrBtn');
+const openHostLinkBtn = document.getElementById('openHostLinkBtn');
+const hostSheetEyebrow = document.getElementById('hostSheetEyebrow');
+const hostSheetTitle = document.getElementById('hostSheetTitle');
+const hostSheetDesc = document.getElementById('hostSheetDesc');
+let lastHostLink = '';
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   let eventUrl = document.getElementById('eventUrl').value.trim();
   const hostProfile = document.getElementById('hostProfile').value.trim();
   const followupUrl = document.getElementById('followupUrl').value.trim();
-  const followupLabel = document.getElementById('followupLabel').value.trim();
+  const followupLabel = document.getElementById('followupLabel').value.trim() || '행사 자료 보기';
   const joinAutoApproveUntil = document.getElementById('joinAutoApproveUntil').value;
   if (eventUrl && !/^https?:\/\//i.test(eventUrl)) eventUrl = 'https://' + eventUrl;
 
@@ -177,13 +227,14 @@ form.addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
+    const hostLink = new URL(data.hostLink || `/e/${data.slug}`, window.location.origin).toString();
     saveRecentEvent({
       slug: data.slug,
       title: data.event?.title || data.slug,
       sourceUrl: data.event?.sourceUrl || eventUrl,
-      hostLink: data.hostLink || `/e/${data.slug}`,
+      hostLink,
     });
-    window.location.href = data.hostLink || `/e/${data.slug}`;
+    openHostSheet(hostLink);
   } catch (err) {
     statusEl.innerHTML = '<span class="err">' + err.message + '</span>';
     btn.disabled = false;
@@ -191,8 +242,39 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
+copyHostLinkBtn.addEventListener('click', async () => {
+  if (!lastHostLink) return;
+  try {
+    await navigator.clipboard.writeText(lastHostLink);
+    const original = copyHostLinkBtn.textContent;
+    copyHostLinkBtn.textContent = 'Copied';
+    setTimeout(() => copyHostLinkBtn.textContent = original, 1200);
+  } catch {}
+});
+
+openHostLinkBtn.addEventListener('click', () => {
+  if (lastHostLink) window.location.href = lastHostLink;
+});
+
 renderRecentEvents();
 prefillTargetEvent();
+
+function openHostSheet(hostLink) {
+  lastHostLink = hostLink;
+  hostSheetEyebrow.textContent = I18N[locale].hostSheetEyebrow;
+  hostSheetTitle.textContent = I18N[locale].hostSheetTitle;
+  hostSheetDesc.textContent = I18N[locale].hostSheetDesc;
+  copyHostLinkBtn.textContent = I18N[locale].copyHostLink;
+  downloadHostQrBtn.textContent = I18N[locale].saveQr;
+  openHostLinkBtn.textContent = I18N[locale].openHostLink;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=560x560&margin=8&data=${encodeURIComponent(hostLink)}`;
+  hostQrImage.src = qrUrl;
+  hostLinkBox.textContent = hostLink;
+  downloadHostQrBtn.href = qrUrl;
+  btn.disabled = false;
+  btn.textContent = I18N[locale].submit;
+  hostSheet.showModal();
+}
 
 function saveRecentEvent(event) {
   const items = loadRecentEvents().filter((item) => item.slug !== event.slug);
@@ -242,6 +324,7 @@ function prefillTargetEvent() {
 
 const deadlineInput = document.getElementById('joinAutoApproveUntil');
 if (!deadlineInput.value) deadlineInput.value = '2026-06-30T23:59';
+document.getElementById('followupLabel').value = '행사 자료 보기';
 
 function escapeHtml(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

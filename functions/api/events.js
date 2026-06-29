@@ -2,6 +2,14 @@
 // GET  /api/events?slug=xxx
 // POST /api/events?action=membership  { slug, profileId, op, hostToken }
 
+const ALLOWED_EVENT_HOSTS = [
+  'lu.ma',
+  'luma.com',
+  'cerebralvalley.ai',
+  'linkedin.com',
+  'www.linkedin.com',
+];
+
 export async function onRequestPost(ctx) {
   const url = new URL(ctx.request.url);
   if (url.searchParams.get('action') === 'membership') {
@@ -16,6 +24,7 @@ async function handleEventUpsert({ request, env }) {
     if (!eventUrl) return json({ error: 'eventUrl required' }, 400);
 
     const normalizedEventUrl = normalizeUrl(eventUrl);
+    assertAllowedEventHost(normalizedEventUrl);
     const parsed = await parseEventUrl(normalizedEventUrl);
     const slug = parsed.slug || slugifyFromUrl(normalizedEventUrl);
 
@@ -117,6 +126,13 @@ function normalizeUrl(url) {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
 }
 
+function assertAllowedEventHost(url) {
+  const host = new URL(url).hostname.toLowerCase();
+  if (!ALLOWED_EVENT_HOSTS.some((allowed) => host === allowed || host.endsWith(`.${allowed}`))) {
+    throw new Error(`Unsupported event host. Allowed: ${ALLOWED_EVENT_HOSTS.join(', ')}`);
+  }
+}
+
 function normalizeOptionalUrl(url) {
   const value = String(url || '').trim();
   if (!value) return null;
@@ -172,6 +188,7 @@ async function parseEventUrl(url) {
 function detectSource(u) {
   if (u.hostname.includes('cerebralvalley')) return 'cerebralvalley';
   if (u.hostname.includes('lu.ma') || u.hostname.includes('luma')) return 'luma';
+  if (u.hostname.includes('linkedin')) return 'linkedin';
   return 'web';
 }
 
