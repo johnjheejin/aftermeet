@@ -21,8 +21,8 @@ export async function onRequestGet({ params, env, request }) {
     archived: t(L, { ko: '이 이벤트는 보관 상태라 새 참여가 닫혀 있어요.', en: 'This event is archived, so new joins are closed.' }),
     profileLabel: t(L, { ko: '본인 프로필 링크', en: 'Your profile link' }),
     profilePh: t(L, { ko: 'linkedin.com/in/you · x.com/you · github.com/you', en: 'linkedin.com/in/you · x.com/you · github.com/you' }),
-    profileHint: t(L, { ko: 'LinkedIn, X, GitHub, Facebook, 또는 본인 사이트. LinkedIn은 자동 파싱이 불안정할 수 있으니 이름을 한번 확인해 주세요.', en: 'LinkedIn, X, GitHub, Facebook, or your personal site. LinkedIn auto-parsing can be flaky, so please confirm your name.' }),
-    nameLabel: t(L, { ko: '표시 이름', en: 'Display name' }),
+    profileHint: t(L, { ko: 'LinkedIn, X, GitHub, Facebook, 또는 본인 사이트 링크를 넣고, 아래 이름은 직접 확인해서 적어주세요.', en: 'Paste your LinkedIn, X, GitHub, Facebook, or personal site, then confirm your name below.' }),
+    nameLabel: t(L, { ko: '표시 이름 (직접 입력)', en: 'Display name (enter manually)' }),
     noteLabel: t(L, { ko: '한 줄 소개', en: 'One-line intro' }),
     namePh: t(L, { ko: '예: John J Heejin', en: 'e.g. John J Heejin' }),
     notePh: t(L, { ko: '요즘 뭐 하고 계세요? (한 줄)', en: "What are you working on? (one line)" }),
@@ -143,12 +143,6 @@ const ALREADY_P = ${JSON.stringify(S.alreadyP)};
 const profileUrlEl = document.getElementById('profileUrl');
 const displayNameEl = document.getElementById('displayName');
 
-profileUrlEl.addEventListener('blur', () => {
-  if (displayNameEl.value.trim()) return;
-  const guessed = guessNameFromProfileUrl(profileUrlEl.value);
-  if (guessed) displayNameEl.value = guessed;
-});
-
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   let profileUrl = profileUrlEl.value.trim();
@@ -192,27 +186,6 @@ form.addEventListener('submit', async (e) => {
     btn.textContent = SUBMIT_LABEL;
   }
 });
-
-function guessNameFromProfileUrl(value) {
-  try {
-    const normalized = /^https?:\/\//i.test(value) ? value : 'https://' + value;
-    const u = new URL(normalized);
-    const parts = u.pathname.split('/').filter(Boolean);
-    const raw = parts[parts.length - 1] || '';
-    if (!raw) return '';
-    const spaced = raw
-      .replace(/^@/, '')
-      .replace(/[._-]+/g, ' ')
-      .replace(/([a-z])([A-Z])/g, '$1 $2')
-      .replace(/(\D)(\d)/g, '$1 $2')
-      .replace(/(\d)(\D)/g, '$1 $2')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return spaced.split(' ').map((part) => part ? part[0].toUpperCase() + part.slice(1) : part).join(' ');
-  } catch {
-    return '';
-  }
-}
 </script>`}
 </body>
 </html>`;

@@ -274,13 +274,13 @@ for (const el of document.querySelectorAll('[data-op]')) {
 function renderCard(p, S) {
   const platformIcon = { linkedin: '𝐢𝐧', x: '𝕏', github: '◉', threads: '@', facebook: 'f', web: '🌐' }[p.platform] || '🔗';
   const platformLabel = { linkedin: 'LinkedIn', x: 'X', github: 'GitHub', threads: 'Threads', facebook: 'Facebook', web: 'Website' }[p.platform] || p.platform;
-  const initial = ((p.name || '?')[0] || '?').toUpperCase();
+  const fallbackAvatar = `<div class="person-avatar person-avatar-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
   return `
     <a class="person" href="${escapeAttr(p.url)}" target="_blank" rel="noopener">
       ${p.avatar ? `
-        <img class="person-avatar" src="${escapeAttr(p.avatar)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'person-avatar\\'>${initial}</div>'" />
+        <img class="person-avatar" src="${escapeAttr(p.avatar)}" alt="" loading="lazy" onerror="this.outerHTML=${JSON.stringify('<div class=\\"person-avatar person-avatar-icon\\" aria-hidden=\\"true\\"><svg viewBox=\\"0 0 24 24\\" width=\\"28\\" height=\\"28\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"1.8\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M20 21a8 8 0 0 0-16 0\\"></path><circle cx=\\"12\\" cy=\\"7\\" r=\\"4\\"></circle></svg></div>')}" />
       ` : `
-        <div class="person-avatar">${initial}</div>
+        ${fallbackAvatar}
       `}
       <div class="person-name">${escapeHtml(p.name || 'Anonymous')}</div>
       ${p.title ? `<div class="person-title">${escapeHtml(p.title)}</div>` : ''}
