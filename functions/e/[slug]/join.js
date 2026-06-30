@@ -26,8 +26,8 @@ export async function onRequestGet({ params, env, request }) {
     noteLabel: t(L, { ko: '한 줄 소개', en: 'One-line intro' }),
     namePh: t(L, { ko: '예: John J Heejin', en: 'e.g. John J Heejin' }),
     notePh: t(L, { ko: '요즘 뭐 하고 계세요? (한 줄)', en: "What are you working on? (one line)" }),
-    submit: t(L, { ko: '연결하기 →', en: 'Join the meet →' }),
-    connecting: t(L, { ko: '연결 중…', en: 'Connecting…' }),
+    submit: t(L, { ko: '등록하기 →', en: 'Register →' }),
+    connecting: t(L, { ko: '등록 중…', en: 'Registering…' }),
     done: t(L, { ko: '완료! 이동 중…', en: 'Done! Redirecting…' }),
     needUrl: t(L, { ko: '프로필 링크를 입력해 주세요.', en: 'Please enter your profile link.' }),
     timeout: t(L, { ko: '연결이 지연되고 있어요. 네트워크 확인 후 다시 시도해 주세요.', en: 'The request timed out. Check your connection and try again.' }),
@@ -121,7 +121,7 @@ export async function onRequestGet({ params, env, request }) {
     <h2 id="successHeading">${escapeHtml(S.successH)}</h2>
     <p id="successBody">${escapeHtml(S.successP)}</p>
     <div class="success-actions">
-      <a href="/e/${slug}${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}" class="btn btn-primary">${escapeHtml(S.successBtn)}</a>
+      <a href="/e/${slug}/${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}" class="btn btn-primary">${escapeHtml(S.successBtn)}</a>
       ${followupAllowed ? `<a id="followupBtn" href="${escapeAttr(event.followupUrl)}" target="_blank" rel="noopener" class="btn btn-ghost">${escapeHtml(S.materialsBtn)}</a>` : ''}
     </div>
   </div>
@@ -145,7 +145,7 @@ const ALREADY_P = ${JSON.stringify(S.alreadyP)};
 
 const profileUrlEl = document.getElementById('profileUrl');
 const displayNameEl = document.getElementById('displayName');
-const EVENT_URL = '/e/${slug}${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}';
+const EVENT_URL = '/e/${slug}/${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}';
 let submitting = false;
 
 form.addEventListener('submit', async (e) => {
