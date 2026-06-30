@@ -66,6 +66,8 @@ export async function onRequestGet({ params, env, request }) {
     participants: t(L, { ko: '참여자', en: 'Participants' }),
     pending: t(L, { ko: '승인 대기', en: 'Pending approval' }),
     hidden: t(L, { ko: '숨긴 참가자', en: 'Hidden people' }),
+    manageApproved: t(L, { ko: '공개 참여자 관리', en: 'Manage public participants' }),
+    manageApprovedHint: t(L, { ko: '공개 중인 참여자를 숨기거나 대기 상태로 보낼 수 있어요.', en: 'Hide a public participant or move them back to pending.' }),
     approve: t(L, { ko: '승인', en: 'Approve' }),
     hide: t(L, { ko: '숨기기', en: 'Hide' }),
     movePending: t(L, { ko: '대기로', en: 'Move to pending' }),
@@ -198,6 +200,17 @@ export async function onRequestGet({ params, env, request }) {
   `}
 
   ${isHost ? `
+    <section class="subsection rise">
+      <div class="section-head">
+        <h2>${escapeHtml(S.manageApproved)}</h2>
+        <div class="count">${escapeHtml(S.people(approved.length))}</div>
+      </div>
+      <p class="tiny-note" style="margin-bottom:14px;">${escapeHtml(S.manageApprovedHint)}</p>
+      <div class="moderation-grid">
+        ${approved.length ? approved.map((p) => renderModerationCard(p, slug, hostToken, S)).join('') : `<div class="card-flat tiny-note">—</div>`}
+      </div>
+    </section>
+
     <section class="subsection rise">
       <div class="section-head">
         <h2>${escapeHtml(S.pending)}</h2>
