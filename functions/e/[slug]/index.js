@@ -152,6 +152,7 @@ export async function onRequestGet({ params, env, request }) {
 
   ${archived ? `<section class="card-flat rise" style="margin-bottom:22px;">${escapeHtml(S.archivedNotice)}</section>` : ''}
 
+  ${isHost ? `
   <section class="card-flat host-strip rise">
     <div class="host-strip-top">
       <div>
@@ -163,10 +164,11 @@ export async function onRequestGet({ params, env, request }) {
         ${archived ? '' : `<a href="${escapeAttr(joinUrl)}" class="btn btn-primary btn-sm">${escapeHtml(S.joinBtn)}</a>`}
         ${archived ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(joinUrl)}">${escapeHtml(S.copyJoinBtn)}</button>`}
         <button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(eventUrl)}">${escapeHtml(S.copyEventBtn)}</button>
-        ${isHost ? `<button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(hostLink)}">${escapeHtml(S.copyHostBtn)}</button>` : ''}
+        <button type="button" class="btn btn-ghost btn-sm" data-copy="${escapeAttr(hostLink)}">${escapeHtml(S.copyHostBtn)}</button>
       </div>
     </div>
   </section>
+  ` : ''}
 
   ${event.followupUrl ? `
     <section class="followup rise">
