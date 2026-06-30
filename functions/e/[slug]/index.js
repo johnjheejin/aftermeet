@@ -298,10 +298,6 @@ function renderCard(p, S) {
       <div class="person-name">${escapeHtml(p.name || 'Anonymous')}</div>
       ${p.title ? `<div class="person-title">${escapeHtml(p.title)}</div>` : ''}
       ${p.note ? `<div class="person-note">${escapeHtml(p.note)}</div>` : ''}
-      <div class="status-badges">
-        <span class="chip">${escapeHtml(labelForState(p.membership.joinState, S))}</span>
-        <span class="chip">${escapeHtml(p.membership.joinSource === 'screen' ? S.screenJoinBadge : S.directJoinBadge)}</span>
-      </div>
       <div class="person-platform"><span>${platformIcon}</span><span>${escapeHtml(platformLabel)}</span></div>
     </a>
   `;
