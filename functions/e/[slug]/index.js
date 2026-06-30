@@ -139,9 +139,9 @@ export async function onRequestGet({ params, env, request }) {
     ${event.description ? `<p class="ev-desc">${escapeHtml(truncate(event.description, 220))}</p>` : ''}
     <div class="meta-row">
       ${event.location ? `<span class="chip">📍 ${escapeHtml(event.location)}</span>` : ''}
-      ${event.date ? `<span class="chip">📅 ${escapeHtml(formatDate(event.date, L))}</span>` : ''}
+      ${event.date ? `<span class="chip">📅 <time datetime="${escapeAttr(event.date)}" data-fmt="date">${escapeHtml(formatDate(event.date, L))}</time></span>` : ''}
       <span class="chip">👥 ${escapeHtml(S.people(approved.length))}</span>
-      ${event.joinAutoApproveUntil ? `<span class="chip">⏳ ${escapeHtml(S.autoUntil)}: ${escapeHtml(formatDateTime(event.joinAutoApproveUntil, L))}</span>` : ''}
+      ${event.joinAutoApproveUntil ? `<span class="chip">⏳ ${escapeHtml(S.autoUntil)}: <time datetime="${escapeAttr(event.joinAutoApproveUntil)}" data-fmt="datetime">${escapeHtml(formatDateTime(event.joinAutoApproveUntil, L))}</time></span>` : ''}
       ${status !== 'active' ? `<span class="chip">${escapeHtml(status === 'archived' ? S.archivedBadge : S.hiddenBadge)}</span>` : ''}
       <a href="${escapeAttr(event.sourceUrl)}" target="_blank" rel="noopener" class="chip" style="text-decoration:none;">${escapeHtml(S.original)}</a>
     </div>
@@ -240,6 +240,20 @@ export async function onRequestGet({ params, env, request }) {
 
 <script>
 const hostToken = ${JSON.stringify(hostToken)};
+const LOCALE = ${JSON.stringify(L === 'ko' ? 'ko-KR' : 'en-US')};
+for (const el of document.querySelectorAll('time[data-fmt]')) {
+  const iso = el.getAttribute('datetime');
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) continue;
+  try {
+    if (el.getAttribute('data-fmt') === 'date') {
+      el.textContent = d.toLocaleDateString(LOCALE, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    } else {
+      el.textContent = d.toLocaleString(LOCALE, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+    el.title = d.toLocaleString(LOCALE, { timeZoneName: 'short' });
+  } catch {}
+}
 for (const el of document.querySelectorAll('[data-copy]')) {
   el.addEventListener('click', async () => {
     try {
@@ -312,7 +326,7 @@ function renderModerationCard(p, slug, hostToken, S) {
         <div class="status-badges">
           <span class="chip">${escapeHtml(labelForState(p.membership.joinState, S))}</span>
           <span class="chip">${escapeHtml(p.membership.joinSource === 'screen' ? S.screenJoinBadge : S.directJoinBadge)}</span>
-          ${p.membership.joinedAt ? `<span class="chip">${escapeHtml(formatDateTime(p.membership.joinedAt, 'en'))}</span>` : ''}
+          ${p.membership.joinedAt ? `<span class="chip"><time datetime="${escapeAttr(p.membership.joinedAt)}" data-fmt="datetime">${escapeHtml(formatDateTime(p.membership.joinedAt, 'en'))}</time></span>` : ''}
         </div>
       </div>
       <div class="moderation-actions">
