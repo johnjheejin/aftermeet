@@ -40,19 +40,22 @@ export async function onRequestGet({ params, env, request }) {
   pending.sort(sortProfiles);
   hidden.sort(sortProfiles);
 
+  const sourceName = { luma: 'Luma', cerebralvalley: 'Cerebral Valley', linkedin: 'LinkedIn' }[event.source] || null;
   const S = {
     persistent: t(L, { ko: '지속 페이지', en: 'PERSISTENT' }),
-    screenBtn: t(L, { ko: '📺 큰 화면', en: '📺 Screen' }),
-    joinBtn: t(L, { ko: '+ 참여하기', en: '+ Join' }),
-    copyJoinBtn: t(L, { ko: '🔗 참여 링크 복사', en: '🔗 Copy join link' }),
+    screenBtn: t(L, { ko: '📺 등록하기 (큰 화면 QR)', en: '📺 Register (big-screen QR)' }),
+    joinBtn: t(L, { ko: '+ 등록하기', en: '+ Register' }),
+    copyJoinBtn: t(L, { ko: '🔗 등록 링크 복사', en: '🔗 Copy register link' }),
     copyEventBtn: t(L, { ko: '📎 행사 링크 복사', en: '📎 Copy event link' }),
     copyHostBtn: t(L, { ko: '🛠 관리 링크 복사', en: '🛠 Copy host link' }),
     copied: t(L, { ko: '복사됨', en: 'Copied' }),
     people: (n) => t(L, { ko: `${n}명`, en: `${n} ${n === 1 ? 'person' : 'people'}` }),
-    original: t(L, { ko: '원본 행사 ↗', en: 'Original ↗' }),
+    original: sourceName
+      ? t(L, { ko: `${sourceName} 페이지 ↗`, en: `${sourceName} page ↗` })
+      : t(L, { ko: '원본 페이지 ↗', en: 'Source page ↗' }),
     materials: t(L, { ko: event.followupLabel || '행사 자료 보기 ↗', en: event.followupLabel || 'View follow-up ↗' }),
     hostTools: t(L, { ko: '호스트 도구', en: 'HOST TOOLS' }),
-    hostHint: t(L, { ko: '이 페이지를 북마크해두면 행사 뒤에도 다시 돌아오기 쉬워요.', en: 'Bookmark this page so you can get back here after the event.' }),
+    hostHint: t(L, { ko: '⚠️ 이 링크를 저장(북마크/QR)해두세요. 이 링크로만 다시 돌아와 참여자를 관리할 수 있어요.', en: '⚠️ Save this link (bookmark/QR). It is the only way back to manage participants.' }),
     autoUntil: t(L, { ko: '자동 승인 마감', en: 'Auto-approve until' }),
     approvedBadge: t(L, { ko: '공개됨', en: 'Approved' }),
     pendingBadge: t(L, { ko: '승인 대기', en: 'Pending' }),
