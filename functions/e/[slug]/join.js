@@ -158,7 +158,7 @@ form.addEventListener('submit', async (e) => {
     profileUrlEl.focus();
     return;
   }
-  if (!/^https?:\/\//i.test(profileUrl)) profileUrl = 'https://' + profileUrl;
+  if (!/^https?:/i.test(profileUrl)) profileUrl = 'https://' + profileUrl;
 
   submitting = true;
   btn.disabled = true;
