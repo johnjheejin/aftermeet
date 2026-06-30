@@ -28,6 +28,9 @@ export async function onRequestGet({ params, env, request }) {
     notePh: t(L, { ko: '요즘 뭐 하고 계세요? (한 줄)', en: "What are you working on? (one line)" }),
     submit: t(L, { ko: '연결하기 →', en: 'Join the meet →' }),
     connecting: t(L, { ko: '연결 중…', en: 'Connecting…' }),
+    done: t(L, { ko: '완료! 이동 중…', en: 'Done! Redirecting…' }),
+    needUrl: t(L, { ko: '프로필 링크를 입력해 주세요.', en: 'Please enter your profile link.' }),
+    timeout: t(L, { ko: '연결이 지연되고 있어요. 네트워크 확인 후 다시 시도해 주세요.', en: 'The request timed out. Check your connection and try again.' }),
     successH: t(L, { ko: '연결됐어요.', en: "You're in." }),
     successP: t(L, { ko: '다른 참여자들도 확인해보세요. 페이지를 북마크해두면 행사 후에도 다시 올 수 있어요.', en: 'See who else is here, and bookmark the page — it stays after the meet.' }),
     pendingH: t(L, { ko: '제출됐어요. 승인 대기 중이에요.', en: 'Submitted. Waiting for host approval.' }),
@@ -142,20 +145,34 @@ const ALREADY_P = ${JSON.stringify(S.alreadyP)};
 
 const profileUrlEl = document.getElementById('profileUrl');
 const displayNameEl = document.getElementById('displayName');
+const EVENT_URL = '/e/${slug}${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}';
+let submitting = false;
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  let profileUrl = profileUrlEl.value.trim();
-  if (profileUrl && !/^https?:\/\//i.test(profileUrl)) profileUrl = 'https://' + profileUrl;
+  if (submitting) return;
 
+  let profileUrl = profileUrlEl.value.trim();
+  if (!profileUrl) {
+    statusEl.innerHTML = '<span class="err">${escapeJs(S.needUrl)}</span>';
+    profileUrlEl.focus();
+    return;
+  }
+  if (!/^https?:\/\//i.test(profileUrl)) profileUrl = 'https://' + profileUrl;
+
+  submitting = true;
   btn.disabled = true;
   btn.textContent = CONNECTING_LABEL;
   statusEl.textContent = '';
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+
   try {
     const res = await fetch('/api/profiles', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      signal: controller.signal,
       body: JSON.stringify({
         eventSlug: '${slug}',
         profileUrl,
@@ -164,8 +181,10 @@ form.addEventListener('submit', async (e) => {
         joinSource: ${JSON.stringify(joinSource)}
       })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed');
+    clearTimeout(timer);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+
     if (data.joinState === 'pending') {
       successHeadingEl.textContent = PENDING_H;
       successBodyEl.textContent = PENDING_P;
@@ -173,12 +192,17 @@ form.addEventListener('submit', async (e) => {
       if (followupBtn) followupBtn.remove();
       form.style.display = 'none';
       successEl.style.display = 'block';
+      submitting = false;
       return;
     }
 
-    window.location.href = '/e/${slug}${isHost ? `?host=${encodeURIComponent(hostToken)}` : ''}';
+    btn.textContent = '${escapeJs(S.done)}';
+    window.location.assign(EVENT_URL);
   } catch (err) {
-    statusEl.innerHTML = '<span class="err">' + err.message + '</span>';
+    clearTimeout(timer);
+    submitting = false;
+    const msg = err && err.name === 'AbortError' ? '${escapeJs(S.timeout)}' : (err.message || 'Failed');
+    statusEl.innerHTML = '<span class="err">' + msg + '</span>';
     btn.disabled = false;
     btn.textContent = SUBMIT_LABEL;
   }
@@ -199,3 +223,6 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 function escapeAttr(s) { return escapeHtml(s); }
+function escapeJs(s) {
+  return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+}
